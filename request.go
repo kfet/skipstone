@@ -112,10 +112,34 @@ func buildRequestBody(in *ConverseStreamInput) ([]byte, error) {
 			tc.Tools = append(tc.Tools, toolEntry{ToolSpec: toolSpec{
 				Name:        t.Name,
 				Description: t.Description,
-				InputSchema: map[string]json.RawMessage{"json": t.InputSchema},
+				InputSchema: map[string]json.RawMessage{"json": normalizeToolSchema(t.InputSchema)},
 			}})
 		}
 		body.ToolConfig = tc
 	}
 	return json.Marshal(body)
+}
+
+// emptyObjectSchema is the placeholder used when a tool reports an empty,
+// missing, or non-object JSON Schema. The Bedrock Converse API requires
+// toolConfig.tools[].toolSpec.inputSchema.json to be a JSON object and rejects
+// anything else with a ValidationException.
+var emptyObjectSchema = json.RawMessage(`{"type":"object","properties":{}}`)
+
+// normalizeToolSchema returns raw if it is a valid JSON object, otherwise the
+// canonical empty-object schema. Some MCP servers omit the schema or report a
+// non-object schema (null, true, false, primitives) for parameterless tools;
+// those would otherwise blow up the entire request.
+func normalizeToolSchema(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return emptyObjectSchema
+	}
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return emptyObjectSchema
+	}
+	if _, ok := v.(map[string]any); !ok {
+		return emptyObjectSchema
+	}
+	return raw
 }

@@ -137,6 +137,48 @@ func TestBuildRequestBody_Tools(t *testing.T) {
 	}
 }
 
+func TestBuildRequestBody_Tools_NormalizesBadSchema(t *testing.T) {
+	cases := map[string]json.RawMessage{
+		"nil":       nil,
+		"empty":     json.RawMessage(``),
+		"null":      json.RawMessage(`null`),
+		"bool":      json.RawMessage(`true`),
+		"primitive": json.RawMessage(`42`),
+		"array":     json.RawMessage(`[1,2,3]`),
+		"garbage":   json.RawMessage(`not json`),
+	}
+	for name, schema := range cases {
+		t.Run(name, func(t *testing.T) {
+			body, err := buildRequestBody(&ConverseStreamInput{
+				ModelID:  "m",
+				Messages: []Message{{Role: RoleUser, Content: []Block{{Text: "x"}}}},
+				Tools:    []Tool{{Name: "t", InputSchema: schema}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			s := string(body)
+			// Expect the inputSchema.json value to be the canonical empty object.
+			if !strings.Contains(s, `"inputSchema":{"json":{"type":"object","properties":{}}}`) {
+				t.Errorf("schema not normalized: %s", s)
+			}
+		})
+	}
+
+	// Valid object schema must pass through untouched.
+	body, err := buildRequestBody(&ConverseStreamInput{
+		ModelID:  "m",
+		Messages: []Message{{Role: RoleUser, Content: []Block{{Text: "x"}}}},
+		Tools:    []Tool{{Name: "t", InputSchema: json.RawMessage(`{"type":"object","properties":{"q":{"type":"string"}}}`)}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"q":{"type":"string"}`) {
+		t.Errorf("valid schema mangled: %s", body)
+	}
+}
+
 func TestBuildRequestBody_Errors(t *testing.T) {
 	if _, err := buildRequestBody(nil); err == nil {
 		t.Error("nil input")
