@@ -12,6 +12,9 @@ import (
 	"strconv"
 	"time"
 
+	"path/filepath"
+
+	"github.com/kfet/bedrock-light/awsini"
 	"github.com/kfet/bedrock-light/creds"
 	"github.com/kfet/bedrock-light/eventstream"
 	"github.com/kfet/bedrock-light/sigv4"
@@ -84,6 +87,9 @@ func NewClient(opts ...Option) (*Client, error) {
 		c.region = os.Getenv("AWS_REGION")
 		if c.region == "" {
 			c.region = os.Getenv("AWS_DEFAULT_REGION")
+		}
+		if c.region == "" {
+			c.region = regionFromProfile()
 		}
 		if c.region == "" {
 			c.region = "us-east-1"
@@ -314,9 +320,11 @@ type EventMessageStop struct {
 // EventMetadata corresponds to :event-type metadata.
 type EventMetadata struct {
 	Usage struct {
-		InputTokens  int `json:"inputTokens"`
-		OutputTokens int `json:"outputTokens"`
-		TotalTokens  int `json:"totalTokens"`
+		InputTokens            int `json:"inputTokens"`
+		OutputTokens           int `json:"outputTokens"`
+		TotalTokens            int `json:"totalTokens"`
+		CacheReadInputTokens   int `json:"cacheReadInputTokens"`
+		CacheWriteInputTokens  int `json:"cacheWriteInputTokens"`
 	} `json:"usage"`
 	Metrics struct {
 		LatencyMs int `json:"latencyMs"`
@@ -360,3 +368,15 @@ func decodeEvent(t string, raw []byte) any {
 }
 
 
+
+// regionFromProfile reads region= from ~/.aws/config for AWS_PROFILE (or "default").
+// Returns "" if not found / unreadable.
+func regionFromProfile() string {
+	profile := os.Getenv("AWS_PROFILE")
+	if profile == "" {
+		profile = "default"
+	}
+	home, _ := os.UserHomeDir()
+	cfgFile, _ := awsini.LoadConfig(filepath.Join(home, ".aws", "config"))
+	return cfgFile.Get(profile, "region")
+}

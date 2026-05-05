@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -528,5 +530,35 @@ func TestEventJSONShape(t *testing.T) {
 	b, _ := json.Marshal(src)
 	if !strings.Contains(string(b), `"contentBlockIndex":5`) {
 		t.Errorf("got %s", b)
+	}
+}
+
+func TestRegionFromProfile(t *testing.T) {
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, ".aws"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".aws", "config"),
+		[]byte("[profile p]\nregion = ap-southeast-2\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	t.Setenv("AWS_PROFILE", "p")
+	t.Setenv("AWS_REGION", "")
+	t.Setenv("AWS_DEFAULT_REGION", "")
+	cl, err := NewClient(WithStaticCredentials("a", "b", ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cl.region != "ap-southeast-2" {
+		t.Errorf("got %s", cl.region)
+	}
+}
+
+func TestEventMetadataCacheTokens(t *testing.T) {
+	raw := []byte(`{"usage":{"inputTokens":1,"outputTokens":2,"totalTokens":3,"cacheReadInputTokens":10,"cacheWriteInputTokens":20}}`)
+	v := decodeEvent("metadata", raw).(EventMetadata)
+	if v.Usage.CacheReadInputTokens != 10 || v.Usage.CacheWriteInputTokens != 20 {
+		t.Errorf("got %+v", v.Usage)
 	}
 }
