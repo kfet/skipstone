@@ -1,16 +1,18 @@
 // Package creds resolves AWS credentials for SigV4 signing.
 //
-// Resolution order:
-//  1. Static creds passed via WithStatic (highest priority).
+// Resolution order in DefaultChain:
+//  1. Static creds passed via WithStatic (highest priority, short-circuits chain).
 //  2. Environment: AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY (+ optional AWS_SESSION_TOKEN).
-//  3. Shared credentials/config files for the active profile:
+//  3. AssumeRoleWithWebIdentity (IRSA): AWS_WEB_IDENTITY_TOKEN_FILE + AWS_ROLE_ARN.
+//  4. ECS task creds: AWS_CONTAINER_CREDENTIALS_RELATIVE_URI / _FULL_URI.
+//  5. Shared credentials/config files for the active profile, supporting:
 //       - aws_access_key_id / aws_secret_access_key / aws_session_token
 //       - credential_process (executes a command, parses JSON from stdout)
+//       - role_arn + source_profile / credential_source (STS AssumeRole, MFA)
+//  6. EC2 IMDSv2 (unless AWS_EC2_METADATA_DISABLED=true).
 //
 // Out of scope (use the AWS CLI / granted `assume` upstream):
-//   - SSO login flow + token cache
-//   - STS AssumeRole / source_profile chains
-//   - MFA, IMDS, ECS task creds, web identity / IRSA
+//   - SSO login flow + token cache / OIDC refresh
 package creds
 
 import (
@@ -18,6 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,6 +61,9 @@ func Static(ak, sk, st string) Provider {
 type Config struct {
 	// Profile is the AWS profile name. Defaults to AWS_PROFILE or "default".
 	Profile string
+	// Region overrides region resolution for STS calls (AssumeRole / IRSA).
+	// If empty, uses profile's region= then AWS_REGION/AWS_DEFAULT_REGION then us-east-1.
+	Region string
 	// ConfigFile and CredentialsFile override the default ~/.aws paths.
 	ConfigFile      string
 	CredentialsFile string
@@ -66,6 +73,21 @@ type Config struct {
 	Now func() time.Time
 	// Exec runs a credential_process command. Defaults to exec.CommandContext.
 	Exec func(ctx context.Context, name string, args ...string) ([]byte, error)
+	// HTTPClient is used for IMDS / ECS / STS / IRSA calls. Defaults to http.DefaultClient.
+	HTTPClient *http.Client
+	// IMDSEndpoint overrides the IMDSv2 base URL (default http://169.254.169.254).
+	IMDSEndpoint string
+	// ECSEndpoint overrides the ECS metadata host (default http://169.254.170.2)
+	// for AWS_CONTAINER_CREDENTIALS_RELATIVE_URI.
+	ECSEndpoint string
+	// STSEndpoint overrides the STS endpoint (default https://sts.<region>.amazonaws.com).
+	STSEndpoint string
+	// MFATokenProvider returns an MFA token code for the given serial. If nil,
+	// the default reads a line from Stdin after writing a prompt to Stderr.
+	MFATokenProvider func(serial string) (string, error)
+	// Stdin / Stderr default to os.Stdin / os.Stderr (used by the default MFA prompt).
+	Stdin  io.Reader
+	Stderr io.Writer
 }
 
 func (c *Config) env(k string) string {
@@ -89,10 +111,19 @@ func (c *Config) execCmd(ctx context.Context, name string, args ...string) ([]by
 	return exec.CommandContext(ctx, name, args...).Output()
 }
 
+func (c *Config) httpClient() *http.Client {
+	if c.HTTPClient != nil {
+		return c.HTTPClient
+	}
+	return http.DefaultClient
+}
+
+// errNoMatch signals a provider had nothing to contribute; the chain should try the next one.
+var errNoMatch = errors.New("creds: no match")
+
 // DefaultChain returns a Provider implementing the documented resolution order.
 func DefaultChain(cfg Config) Provider {
-	chain := &chain{cfg: cfg}
-	return chain
+	return &chain{cfg: cfg}
 }
 
 type chain struct {
@@ -128,48 +159,105 @@ func (c *chain) expired() bool {
 }
 
 func (c *chain) resolve(ctx context.Context) (Value, error) {
-	// 1. Environment.
-	if ak := c.cfg.env("AWS_ACCESS_KEY_ID"); ak != "" {
-		sk := c.cfg.env("AWS_SECRET_ACCESS_KEY")
-		if sk == "" {
-			return Value{}, errors.New("creds: AWS_ACCESS_KEY_ID set without AWS_SECRET_ACCESS_KEY")
+	providers := []func() (Value, error){
+		func() (Value, error) { return envProvider(&c.cfg) },
+		func() (Value, error) { return webIdentityProvider(ctx, &c.cfg) },
+		func() (Value, error) { return ecsProvider(ctx, &c.cfg) },
+		func() (Value, error) { return sharedProfileProvider(ctx, &c.cfg) },
+		func() (Value, error) { return imdsProvider(ctx, &c.cfg) },
+	}
+	for _, p := range providers {
+		v, err := p()
+		if err == nil {
+			return v, nil
 		}
-		return Value{
-			AccessKeyID:     ak,
-			SecretAccessKey: sk,
-			SessionToken:    c.cfg.env("AWS_SESSION_TOKEN"),
-		}, nil
+		if !errors.Is(err, errNoMatch) {
+			return Value{}, err
+		}
 	}
+	return Value{}, errors.New("creds: no credentials found in environment, IRSA, ECS, shared profile, or IMDS")
+}
 
-	// 2. Shared files.
-	profile := c.cfg.Profile
-	if profile == "" {
-		profile = c.cfg.env("AWS_PROFILE")
+func envProvider(cfg *Config) (Value, error) {
+	ak := cfg.env("AWS_ACCESS_KEY_ID")
+	if ak == "" {
+		return Value{}, errNoMatch
 	}
-	if profile == "" {
-		profile = "default"
+	sk := cfg.env("AWS_SECRET_ACCESS_KEY")
+	if sk == "" {
+		return Value{}, errors.New("creds: AWS_ACCESS_KEY_ID set without AWS_SECRET_ACCESS_KEY")
 	}
+	return Value{
+		AccessKeyID:     ak,
+		SecretAccessKey: sk,
+		SessionToken:    cfg.env("AWS_SESSION_TOKEN"),
+	}, nil
+}
 
-	credPath := c.cfg.CredentialsFile
+// resolveProfileName returns the active profile name.
+func resolveProfileName(cfg *Config) string {
+	p := cfg.Profile
+	if p == "" {
+		p = cfg.env("AWS_PROFILE")
+	}
+	if p == "" {
+		p = "default"
+	}
+	return p
+}
+
+func loadIniFiles(cfg *Config) (cred, conf awsini.File, err error) {
+	credPath := cfg.CredentialsFile
 	if credPath == "" {
-		credPath = filepath.Join(homeDir(c.cfg.env), ".aws", "credentials")
+		credPath = filepath.Join(homeDir(cfg.env), ".aws", "credentials")
 	}
-	cfgPath := c.cfg.ConfigFile
+	cfgPath := cfg.ConfigFile
 	if cfgPath == "" {
-		cfgPath = filepath.Join(homeDir(c.cfg.env), ".aws", "config")
+		cfgPath = filepath.Join(homeDir(cfg.env), ".aws", "config")
+	}
+	cred, err = awsini.LoadCredentials(credPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("creds: load credentials: %w", err)
+	}
+	conf, err = awsini.LoadConfig(cfgPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("creds: load config: %w", err)
+	}
+	return cred, conf, nil
+}
+
+// sharedProfileProvider resolves creds from the shared ini files for the active profile,
+// including AssumeRole / source_profile / credential_source chains. Returns errNoMatch
+// if the profile section is absent in both files (so the chain can fall through to IMDS).
+func sharedProfileProvider(ctx context.Context, cfg *Config) (Value, error) {
+	profile := resolveProfileName(cfg)
+	cred, conf, err := loadIniFiles(cfg)
+	if err != nil {
+		return Value{}, err
+	}
+	if _, ok := cred[profile]; !ok {
+		if _, ok2 := conf[profile]; !ok2 {
+			return Value{}, errNoMatch
+		}
+	}
+	return resolveProfile(ctx, cfg, cred, conf, profile, map[string]bool{})
+}
+
+// resolveProfile resolves a named profile, recursing through source_profile chains.
+func resolveProfile(ctx context.Context, cfg *Config, cred, conf awsini.File, profile string, visited map[string]bool) (Value, error) {
+	if visited[profile] {
+		return Value{}, fmt.Errorf("creds: source_profile cycle through %q", profile)
+	}
+	visited[profile] = true
+
+	// role_arn => AssumeRole chain.
+	roleArn := profileGet(cred, conf, profile, "role_arn")
+	if roleArn != "" {
+		return assumeRoleFromProfile(ctx, cfg, cred, conf, profile, roleArn, visited)
 	}
 
-	credFile, err := awsini.LoadCredentials(credPath)
-	if err != nil {
-		return Value{}, fmt.Errorf("creds: load credentials: %w", err)
-	}
-	confFile, err := awsini.LoadConfig(cfgPath)
-	if err != nil {
-		return Value{}, fmt.Errorf("creds: load config: %w", err)
-	}
-
-	// Static keys in either credentials or config.
-	for _, src := range []awsini.File{credFile, confFile} {
+	// Static keys (credentials wins over config per AWS rules).
+	for _, src := range []awsini.File{cred, conf} {
 		ak := src.Get(profile, "aws_access_key_id")
 		if ak == "" {
 			continue
@@ -186,17 +274,24 @@ func (c *chain) resolve(ctx context.Context) (Value, error) {
 	}
 
 	// credential_process — config first, then credentials.
-	for _, src := range []awsini.File{confFile, credFile} {
+	for _, src := range []awsini.File{conf, cred} {
 		if cmd := src.Get(profile, "credential_process"); cmd != "" {
-			return c.runCredentialProcess(ctx, cmd)
+			return runCredentialProcess(ctx, cfg, cmd)
 		}
 	}
 
 	return Value{}, fmt.Errorf("creds: no credentials found for profile %q", profile)
 }
 
+// profileGet looks up a key in either credentials or config (credentials wins).
+func profileGet(cred, conf awsini.File, profile, key string) string {
+	if v := cred.Get(profile, key); v != "" {
+		return v
+	}
+	return conf.Get(profile, key)
+}
+
 // processOutput is the JSON shape emitted by credential_process commands.
-// Fields named per https://docs.aws.amazon.com/sdkref/latest/guide/feature-process-credentials.html
 type processOutput struct {
 	Version         int    `json:"Version"`
 	AccessKeyID     string `json:"AccessKeyId"`
@@ -205,9 +300,9 @@ type processOutput struct {
 	Expiration      string `json:"Expiration"`
 }
 
-func (c *chain) runCredentialProcess(ctx context.Context, cmdline string) (Value, error) {
+func runCredentialProcess(ctx context.Context, cfg *Config, cmdline string) (Value, error) {
 	args := splitCmdline(cmdline)
-	out, err := c.cfg.execCmd(ctx, args[0], args[1:]...)
+	out, err := cfg.execCmd(ctx, args[0], args[1:]...)
 	if err != nil {
 		return Value{}, fmt.Errorf("creds: credential_process: %w", err)
 	}
@@ -272,4 +367,21 @@ func homeDir(env func(string) string) string {
 		return h
 	}
 	return ""
+}
+
+// resolveRegion picks the STS/region for AssumeRole + IRSA flows.
+func resolveRegion(cfg *Config, profileRegion string) string {
+	if cfg.Region != "" {
+		return cfg.Region
+	}
+	if profileRegion != "" {
+		return profileRegion
+	}
+	if r := cfg.env("AWS_REGION"); r != "" {
+		return r
+	}
+	if r := cfg.env("AWS_DEFAULT_REGION"); r != "" {
+		return r
+	}
+	return "us-east-1"
 }
