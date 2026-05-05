@@ -14,10 +14,14 @@ acquire credentials through external tooling such as
 - Static keys from `~/.aws/credentials` profiles
 - `credential_process` (executes a command, parses JSON from stdout)
 - Profile selection via `AWS_PROFILE`
+- **STS `AssumeRole` chains** via `role_arn` + `source_profile` / `credential_source` (Environment / Ec2InstanceMetadata / EcsContainer), with optional `mfa_serial` (prompts on stdin), `external_id`, `duration_seconds`, `role_session_name`
+- **Web identity / IRSA** via `AWS_WEB_IDENTITY_TOKEN_FILE` + `AWS_ROLE_ARN` (AssumeRoleWithWebIdentity)
+- **ECS task creds** via `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI` / `_FULL_URI` (with `AWS_CONTAINER_AUTHORIZATION_TOKEN` / `_TOKEN_FILE`)
+- **EC2 IMDSv2** instance role (token-based, honors `AWS_EC2_METADATA_DISABLED`)
 
 ### Region / endpoint
 - `AWS_REGION` / `AWS_DEFAULT_REGION` env
-- `region = ...` from `~/.aws/config`
+- `region = ...` from `~/.aws/config` (the active profile)
 - Endpoint override via `AWS_ENDPOINT_URL_BEDROCK_RUNTIME` or `WithEndpoint`
 
 ### API
@@ -35,8 +39,6 @@ acquire credentials through external tooling such as
 ## What's _not_ supported
 
 - SSO login flow / token cache (use `aws sso login` or `assume`)
-- STS `AssumeRole` chains via `source_profile` (Granted resolves these)
-- MFA, IMDS, ECS task creds, web identity / IRSA
 - Other Bedrock APIs (`InvokeModel`, non-stream `Converse`)
 
 If you need any of those, use the official AWS SDK.

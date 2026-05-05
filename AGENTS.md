@@ -47,21 +47,26 @@ Anything required to call `ConverseStream` with credentials acquired through:
 - **`~/.aws/credentials`** static profiles (long-term keys or `assume`-written
   short-term keys).
 - **`credential_process`** (executes a command, parses JSON from stdout).
-- **Region** from env or `~/.aws/config`.
+- **STS `AssumeRole` chains** via `role_arn` + `source_profile` /
+  `credential_source`, with optional `mfa_serial` (interactive token prompt),
+  `external_id`, `duration_seconds`, `role_session_name`.
+- **Web identity / IRSA**: `AWS_WEB_IDENTITY_TOKEN_FILE` + `AWS_ROLE_ARN`
+  (AssumeRoleWithWebIdentity, regional STS endpoint).
+- **ECS task creds**: `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI` /
+  `_FULL_URI` (with optional `AWS_CONTAINER_AUTHORIZATION_TOKEN[_FILE]`).
+- **EC2 IMDSv2** instance role (honors `AWS_EC2_METADATA_DISABLED`).
+- **Region** from env, profile config, or default.
 - **Endpoint** override via env or option (FIPS, LocalStack, custom VPC).
 
 Wire concerns:
 
-- SigV4 signing of bounded JSON request bodies.
+- SigV4 signing of bounded JSON / form-urlencoded request bodies.
 - Decoding `application/vnd.amazon.eventstream` framing in responses.
 - Retry with exponential backoff on 429/5xx, honoring `Retry-After`.
 
 ## What's out of scope (do NOT add without discussion)
 
 - SSO login flow / token cache / OIDC refresh — use `aws sso login` upstream.
-- STS `AssumeRole` / `source_profile` chains — `assume` resolves these.
-- MFA prompts (`mfa_serial`).
-- IMDS / ECS task creds / web identity (IRSA).
 - Other Bedrock APIs (`InvokeModel`, non-stream `Converse`).
 - Presigned URLs, query-string auth.
 - Streaming-payload signing (`STREAMING-AWS4-HMAC-SHA256-PAYLOAD`).
@@ -80,7 +85,12 @@ bedrocklight/                 root package — public API
 ├── client.go                 Client, ConverseStream, Stream, Event*
 │
 ├── awsini/                   AWS shared-ini parser (config + credentials)
-├── creds/                    credential resolver (env, profile, credential_process)
+├── creds/                    credential resolver (chain)
+│   ├── creds.go              env, profile, credential_process, chain machinery
+│   ├── imds.go               EC2 IMDSv2
+│   ├── ecs.go                ECS task creds
+│   ├── webidentity.go        AssumeRoleWithWebIdentity (IRSA)
+│   └── assumerole.go         STS AssumeRole, source_profile chains, MFA
 ├── sigv4/                    AWS Signature Version 4 signer
 ├── eventstream/              AWS event-stream frame decoder + encoder
 │
