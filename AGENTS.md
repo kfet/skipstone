@@ -174,17 +174,6 @@ func (s *Stream) Close() error
 5. Cover to 100%. Don't add `.covignore` entries.
 6. Cross-check in `e2e/` if the change touches SigV4 or event-stream framing.
 
-## Roadmap
-
-These are explicitly **deferred** until a real user need surfaces:
-
-- Cross-check `ConverseStream` end-to-end against the AWS SDK in `e2e/`
-  (build the same input, capture both wire payloads, diff). Today we only
-  cross-check SigV4 + event-stream framing.
-- A few more `Event*` typed payloads as Bedrock adds new content block kinds.
-- Optional `httptrace` hooks for debugging.
-- Pluggable retry classifier (right now retries are hardcoded on 429/5xx).
-
 ## Out of scope
 
 - Other AWS services. If you need S3, use the SDK.
