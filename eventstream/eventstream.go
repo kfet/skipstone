@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"slices"
 )
 
 // Frame is a decoded event-stream message.
@@ -133,9 +134,14 @@ func decodeHeaders(b []byte) (map[string]string, error) {
 // Encode produces a single event-stream frame with the given string headers
 // and payload. Used by tests; exported so external callers can build fixtures.
 func Encode(headers map[string]string, payload []byte) []byte {
-	var hdrBuf []byte
 	// Deterministic header order for testability: by key, ascending.
-	keys := sortedKeys(headers)
+	keys := make([]string, 0, len(headers))
+	for k := range headers {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
+	var hdrBuf []byte
 	for _, k := range keys {
 		v := headers[k]
 		hdrBuf = append(hdrBuf, byte(len(k)))
@@ -163,18 +169,4 @@ func Encode(headers map[string]string, payload []byte) []byte {
 	binary.BigEndian.PutUint32(tmp[:], msgCRC)
 	out = append(out, tmp[:]...)
 	return out
-}
-
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	// inline insertion sort to avoid sort import bloat (and keep dependency minimal)
-	for i := 1; i < len(keys); i++ {
-		for j := i; j > 0 && keys[j-1] > keys[j]; j-- {
-			keys[j-1], keys[j] = keys[j], keys[j-1]
-		}
-	}
-	return keys
 }

@@ -6,13 +6,14 @@ all: test
 check: fmtcheck vet
 
 # fmt rewrites all Go files in both modules to canonical gofmt style.
+# (gofmt walks the file tree; it doesn't care about module boundaries, so
+# a single invocation covers e2e/ as well.)
 fmt:
 	@gofmt -w .
-	@cd e2e && gofmt -w .
 
-# fmtcheck fails if any Go file in either module is not gofmt-clean.
+# fmtcheck fails if any Go file is not gofmt-clean.
 fmtcheck:
-	@out="$$(gofmt -l . ; cd e2e && gofmt -l . | sed 's|^|e2e/|')"; \
+	@out="$$(gofmt -l .)"; \
 	if [ -n "$$out" ]; then \
 		echo "ERROR: gofmt offenders (run 'make fmt'):"; \
 		echo "$$out"; \
@@ -20,7 +21,8 @@ fmtcheck:
 	fi
 	@echo "✓ gofmt clean"
 
-# vet runs `go vet` across both modules.
+# vet runs `go vet` across both modules. Unlike gofmt, `go vet ./...`
+# respects module boundaries, so e2e/ needs its own pass.
 vet:
 	@go vet ./...
 	@cd e2e && go vet ./...
