@@ -295,8 +295,8 @@ type EventContentBlockStart struct {
 type EventContentBlockDelta struct {
 	ContentBlockIndex int `json:"contentBlockIndex"`
 	Delta             struct {
-		Text             string `json:"text,omitempty"`
-		ToolUse          *struct {
+		Text    string `json:"text,omitempty"`
+		ToolUse *struct {
 			Input string `json:"input"`
 		} `json:"toolUse,omitempty"`
 		ReasoningContent *struct {
@@ -313,18 +313,18 @@ type EventContentBlockStop struct {
 
 // EventMessageStop corresponds to :event-type messageStop.
 type EventMessageStop struct {
-	StopReason           string          `json:"stopReason"`
+	StopReason                    string          `json:"stopReason"`
 	AdditionalModelResponseFields json.RawMessage `json:"additionalModelResponseFields,omitempty"`
 }
 
 // EventMetadata corresponds to :event-type metadata.
 type EventMetadata struct {
 	Usage struct {
-		InputTokens            int `json:"inputTokens"`
-		OutputTokens           int `json:"outputTokens"`
-		TotalTokens            int `json:"totalTokens"`
-		CacheReadInputTokens   int `json:"cacheReadInputTokens"`
-		CacheWriteInputTokens  int `json:"cacheWriteInputTokens"`
+		InputTokens           int `json:"inputTokens"`
+		OutputTokens          int `json:"outputTokens"`
+		TotalTokens           int `json:"totalTokens"`
+		CacheReadInputTokens  int `json:"cacheReadInputTokens"`
+		CacheWriteInputTokens int `json:"cacheWriteInputTokens"`
 	} `json:"usage"`
 	Metrics struct {
 		LatencyMs int `json:"latencyMs"`
@@ -366,8 +366,6 @@ func decodeEvent(t string, raw []byte) any {
 	}
 	return nil
 }
-
-
 
 // regionFromProfile reads region= from ~/.aws/config for AWS_PROFILE (or "default").
 // Returns "" if not found / unreadable.

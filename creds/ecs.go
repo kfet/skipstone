@@ -35,7 +35,7 @@ func ecsProvider(ctx context.Context, cfg *Config) (Value, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return Value{}, fmt.Errorf("creds: ecs req: %w", err)
-	}	// Authorization header — token literal or token file.
+	} // Authorization header — token literal or token file.
 	if tok := cfg.env("AWS_CONTAINER_AUTHORIZATION_TOKEN"); tok != "" {
 		req.Header.Set("Authorization", tok)
 	} else if file := cfg.env("AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE"); file != "" {

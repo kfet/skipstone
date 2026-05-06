@@ -70,7 +70,7 @@ func TestECSAuthTokenFile(t *testing.T) {
 	defer srv.Close()
 	cfg := &Config{
 		Env: envMap(map[string]string{
-			"AWS_CONTAINER_CREDENTIALS_FULL_URI":      srv.URL,
+			"AWS_CONTAINER_CREDENTIALS_FULL_URI":     srv.URL,
 			"AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE": tokenFile,
 		}),
 		HTTPClient: srv.Client(),
@@ -82,7 +82,7 @@ func TestECSAuthTokenFile(t *testing.T) {
 
 func TestECSAuthTokenFileMissing(t *testing.T) {
 	cfg := &Config{Env: envMap(map[string]string{
-		"AWS_CONTAINER_CREDENTIALS_FULL_URI":      "http://x",
+		"AWS_CONTAINER_CREDENTIALS_FULL_URI":     "http://x",
 		"AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE": "/no/such/file",
 	})}
 	if _, err := ecsProvider(context.Background(), cfg); err == nil {

@@ -6,9 +6,9 @@
 //  3. AssumeRoleWithWebIdentity (IRSA): AWS_WEB_IDENTITY_TOKEN_FILE + AWS_ROLE_ARN.
 //  4. ECS task creds: AWS_CONTAINER_CREDENTIALS_RELATIVE_URI / _FULL_URI.
 //  5. Shared credentials/config files for the active profile, supporting:
-//       - aws_access_key_id / aws_secret_access_key / aws_session_token
-//       - credential_process (executes a command, parses JSON from stdout)
-//       - role_arn + source_profile / credential_source (STS AssumeRole, MFA)
+//     - aws_access_key_id / aws_secret_access_key / aws_session_token
+//     - credential_process (executes a command, parses JSON from stdout)
+//     - role_arn + source_profile / credential_source (STS AssumeRole, MFA)
 //  6. EC2 IMDSv2 (unless AWS_EC2_METADATA_DISABLED=true).
 //
 // Out of scope (use the AWS CLI / granted `assume` upstream):

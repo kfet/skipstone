@@ -135,7 +135,7 @@ func TestWebIdentityHTTPErrorPlain(t *testing.T) {
 	}))
 	defer srv.Close()
 	cfg := &Config{
-		Env: envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
+		Env:         envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
 		STSEndpoint: srv.URL, HTTPClient: srv.Client(),
 	}
 	if _, err := webIdentityProvider(context.Background(), cfg); err == nil {
@@ -150,7 +150,7 @@ func TestWebIdentityBadXML(t *testing.T) {
 	}))
 	defer srv.Close()
 	cfg := &Config{
-		Env: envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
+		Env:         envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
 		STSEndpoint: srv.URL, HTTPClient: srv.Client(),
 	}
 	if _, err := webIdentityProvider(context.Background(), cfg); err == nil {
@@ -165,7 +165,7 @@ func TestWebIdentityEmptyCreds(t *testing.T) {
 	}))
 	defer srv.Close()
 	cfg := &Config{
-		Env: envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
+		Env:         envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
 		STSEndpoint: srv.URL, HTTPClient: srv.Client(),
 	}
 	if _, err := webIdentityProvider(context.Background(), cfg); err == nil {
@@ -180,7 +180,7 @@ func TestWebIdentityBadExpiration(t *testing.T) {
 	}))
 	defer srv.Close()
 	cfg := &Config{
-		Env: envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
+		Env:         envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
 		STSEndpoint: srv.URL, HTTPClient: srv.Client(),
 	}
 	if _, err := webIdentityProvider(context.Background(), cfg); err == nil {
@@ -191,7 +191,7 @@ func TestWebIdentityBadExpiration(t *testing.T) {
 func TestWebIdentityHTTPDoError(t *testing.T) {
 	tokenFile := writeFile(t, "t")
 	cfg := &Config{
-		Env: envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
+		Env:         envMap(map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": tokenFile, "AWS_ROLE_ARN": "arn"}),
 		STSEndpoint: "http://127.0.0.1:1",
 		HTTPClient:  &http.Client{Timeout: 200 * time.Millisecond},
 	}

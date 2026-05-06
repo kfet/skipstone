@@ -141,7 +141,7 @@ func TestAssumeRoleMFAEmptyToken(t *testing.T) {
 	must(os.WriteFile(credPath, []byte("[base]\naws_access_key_id=AK\naws_secret_access_key=SK\n[target]\nrole_arn=arn:role\nsource_profile=base\nmfa_serial=arn:mfa\n"), 0o600))
 	c := DefaultChain(Config{
 		Profile: "target", CredentialsFile: credPath, ConfigFile: filepath.Join(dir, "no"),
-		Env: emptyEnv,
+		Env:   emptyEnv,
 		Stdin: strings.NewReader("\n"), Stderr: &bytes.Buffer{},
 	})
 	if _, err := c.Retrieve(context.Background()); err == nil {
@@ -155,7 +155,7 @@ func TestAssumeRoleMFAProviderError(t *testing.T) {
 	must(os.WriteFile(credPath, []byte("[base]\naws_access_key_id=AK\naws_secret_access_key=SK\n[target]\nrole_arn=arn:role\nsource_profile=base\nmfa_serial=arn:mfa\n"), 0o600))
 	c := DefaultChain(Config{
 		Profile: "target", CredentialsFile: credPath, ConfigFile: filepath.Join(dir, "no"),
-		Env: emptyEnv,
+		Env:              emptyEnv,
 		MFATokenProvider: func(string) (string, error) { return "", errors.New("nope") },
 	})
 	if _, err := c.Retrieve(context.Background()); err == nil {
