@@ -1,5 +1,11 @@
 # bedrock-light
 
+<!-- TODO(badges): once the GitHub repo is published, add:
+       - CI status:    ![CI](https://github.com/kfet/bedrock-light/actions/workflows/test.yml/badge.svg)
+       - pkg.go.dev:   [![Go Reference](https://pkg.go.dev/badge/github.com/kfet/bedrock-light.svg)](https://pkg.go.dev/github.com/kfet/bedrock-light)
+       - Go report:    [![Go Report Card](https://goreportcard.com/badge/github.com/kfet/bedrock-light)](https://goreportcard.com/report/github.com/kfet/bedrock-light)
+-->
+
 Minimal, zero-dependency Go client for **Amazon Bedrock `ConverseStream`**.
 
 Stdlib only. No `aws-sdk-go-v2`, no `smithy-go`. Designed for tools (like
