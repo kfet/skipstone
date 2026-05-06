@@ -67,11 +67,11 @@ func (tc ToolChoice) MarshalJSON() ([]byte, error) {
 
 // requestBody is the JSON shape POSTed to /model/{id}/converse-stream.
 type requestBody struct {
-	Messages                     []Message            `json:"messages"`
-	System                       []SystemBlock        `json:"system,omitempty"`
-	ToolConfig                   *toolConfigBody      `json:"toolConfig,omitempty"`
-	InferenceConfig              *InferenceConfig     `json:"inferenceConfig,omitempty"`
-	AdditionalModelRequestFields json.RawMessage      `json:"additionalModelRequestFields,omitempty"`
+	Messages                     []Message        `json:"messages"`
+	System                       []SystemBlock    `json:"system,omitempty"`
+	ToolConfig                   *toolConfigBody  `json:"toolConfig,omitempty"`
+	InferenceConfig              *InferenceConfig `json:"inferenceConfig,omitempty"`
+	AdditionalModelRequestFields json.RawMessage  `json:"additionalModelRequestFields,omitempty"`
 }
 
 type toolConfigBody struct {
@@ -84,8 +84,8 @@ type toolEntry struct {
 }
 
 type toolSpec struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
+	Name        string                     `json:"name"`
+	Description string                     `json:"description,omitempty"`
 	InputSchema map[string]json.RawMessage `json:"inputSchema"`
 }
 

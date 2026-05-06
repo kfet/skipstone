@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kfet/bedrock-light/awsini"
+	"github.com/kfet/bedrock-light/internal/awsini"
 	"github.com/kfet/bedrock-light/sigv4"
 )
 
@@ -140,6 +140,9 @@ func callAssumeRole(ctx context.Context, cfg *Config, region string, srcCreds Va
 	req.Header.Set("Accept", "application/xml")
 
 	signer := &sigv4.Signer{Region: region, Service: "sts"}
+	// Sign cannot fail here: region/service are non-empty, the endpoint is a
+	// well-formed URL, and srcCreds are guaranteed non-empty by the resolvers
+	// that produced them.
 	_ = signer.Sign(req, sigv4.Credentials{
 		AccessKeyID:     srcCreds.AccessKeyID,
 		SecretAccessKey: srcCreds.SecretAccessKey,

@@ -1,5 +1,3 @@
-// Package bedrocklight is a minimal, zero-dependency client for Amazon
-// Bedrock's ConverseStream API. See package README for scope and tradeoffs.
 package bedrocklight
 
 import "encoding/json"

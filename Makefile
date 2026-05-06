@@ -1,10 +1,34 @@
-.PHONY: all test test-fast run-tests cover open_coverage e2e tidy
+.PHONY: all test test-fast run-tests check fmt fmtcheck vet cover open_coverage e2e tidy
 
 all: test
 
+# check runs the static gates (gofmt + go vet) across both modules.
+check: fmtcheck vet
+
+# fmt rewrites all Go files in both modules to canonical gofmt style.
+fmt:
+	@gofmt -w .
+	@cd e2e && gofmt -w .
+
+# fmtcheck fails if any Go file in either module is not gofmt-clean.
+fmtcheck:
+	@out="$$(gofmt -l . ; cd e2e && gofmt -l . | sed 's|^|e2e/|')"; \
+	if [ -n "$$out" ]; then \
+		echo "ERROR: gofmt offenders (run 'make fmt'):"; \
+		echo "$$out"; \
+		exit 1; \
+	fi
+	@echo "✓ gofmt clean"
+
+# vet runs `go vet` across both modules.
+vet:
+	@go vet ./...
+	@cd e2e && go vet ./...
+	@echo "✓ go vet clean"
+
 # Run unit tests with 100% coverage gate (excluding paths in .covignore).
 # Usage: make run-tests TEST_FLAGS="-race -shuffle=on"
-run-tests:
+run-tests: check
 	@tmpfile=$$(mktemp); \
 	trap 'rm -f $$tmpfile' EXIT; \
 	go test -cover $(TEST_FLAGS) ./... -coverprofile=coverage.tmp.out > $$tmpfile 2>&1; \

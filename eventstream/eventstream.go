@@ -12,6 +12,7 @@
 //
 // Header value types — only the ones Bedrock uses are decoded fully:
 //   - 7 (string)
+//
 // Other types are recognised so the framer doesn't crash, but their values
 // are returned as raw bytes.
 package eventstream

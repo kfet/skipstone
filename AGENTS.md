@@ -80,11 +80,15 @@ the value before any code is written.
 
 ```
 bedrocklight/                 root package — public API
+├── doc.go                    package doc
 ├── types.go                  Message, Block, Tool, ToolChoice, ConverseStreamInput
 ├── request.go                JSON marshalling + buildRequestBody
-├── client.go                 Client, ConverseStream, Stream, Event*
+├── client.go                 Client, NewClient, options, ConverseStream
+├── stream.go                 Stream, Recv, Close
+├── events.go                 Event*, decodeEvent
+├── errors.go                 APIError
+├── retry.go                  backoff + Retry-After helpers
 │
-├── awsini/                   AWS shared-ini parser (config + credentials)
 ├── creds/                    credential resolver (chain)
 │   ├── creds.go              env, profile, credential_process, chain machinery
 │   ├── imds.go               EC2 IMDSv2
@@ -93,6 +97,8 @@ bedrocklight/                 root package — public API
 │   └── assumerole.go         STS AssumeRole, source_profile chains, MFA
 ├── sigv4/                    AWS Signature Version 4 signer
 ├── eventstream/              AWS event-stream frame decoder + encoder
+├── internal/
+│   └── awsini/               AWS shared-ini parser (config + credentials)
 │
 └── e2e/                      separate go.mod — AWS SDK pulled only here
     ├── sigv4_test.go         byte-equal Authorization vs aws-sdk-go-v2 v4 signer
@@ -241,6 +247,8 @@ These are explicitly **deferred** until a real user need surfaces:
 ```bash
 make test         # 100% coverage gate, race detector, shuffled
 make test-fast    # cached, no race
+make check        # gofmt + go vet, both modules
+make fmt          # gofmt -w, both modules
 make e2e          # cross-check against AWS SDK
 make tidy         # go mod tidy in both modules
 make open_coverage

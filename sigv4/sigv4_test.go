@@ -12,7 +12,9 @@ import (
 )
 
 // AWS-published reference values: GET /
-//   https://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
+//
+//	https://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
+//
 // Test creds (also from the docs):
 const (
 	tstAK     = "AKIDEXAMPLE"
