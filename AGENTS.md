@@ -1,8 +1,5 @@
 # AGENTS.md — bedrock-light
 
-Authoritative guide for AI agents (and humans) contributing to this repo.
-Read this before making changes.
-
 ## What this project is
 
 A **minimal, zero-dependency Go client for Amazon Bedrock's `ConverseStream`
@@ -10,9 +7,7 @@ API**. Intended to replace `github.com/aws/aws-sdk-go-v2/service/bedrockruntime`
 in projects that:
 
 - Use exactly one Bedrock API (`ConverseStream`).
-- Acquire AWS credentials externally (env vars, long-term IAM keys in
-  `~/.aws/credentials`, or tools like [granted.dev `assume`](https://granted.dev)
-  that write resolved short-term creds back to env or the credentials file).
+- Acquire AWS credentials externally (env vars, long-term IAM keys in `~/.aws/credentials`).
 - Care about binary size, build time, and dependency surface.
 
 The original motivating consumer is [fir](https://github.com/kfet/fir), where
@@ -29,14 +24,15 @@ with credentials already on disk, that's massive overkill:
 |---|---|---|
 | Runtime modules | 16 | 0 |
 | Module cache | ~58 MB | 0 |
-| Credential sources | env, profile, SSO+OIDC refresh, STS chains, IMDS, ECS, IRSA, MFA, web identity, credential_process | env, profile, credential_process |
-| APIs | all of Bedrock + STS + SSO + … | `ConverseStream` |
+| Credential sources | env, profile, SSO+OIDC refresh, STS chains, IMDS, ECS, IRSA, MFA, web identity, credential_process | env, profile, credential_process, STS AssumeRole chains (incl. MFA), IRSA, ECS, IMDSv2 |
+| APIs | all of Bedrock + STS + SSO + … | `ConverseStream` (+ STS for AssumeRole / web identity) |
 | Type ergonomics | `brtypes.ContentBlockMemberText{Value: brtypes.TextBlock{...}}` | `bedrocklight.Block{Text: "..."}` |
 
-We **deliberately don't** support SSO login, STS AssumeRole chains, MFA, IMDS,
-ECS, or web identity. Those are the painful, security-sensitive flows; users
-delegate them to the AWS CLI or `assume`, and we just consume the resulting
-credentials.
+We **deliberately don't** support the SSO login flow (OIDC device-code +
+token cache refresh) — that's the one painful, security-sensitive flow we
+delegate entirely to the AWS CLI / `assume`. STS AssumeRole, MFA prompts,
+IRSA, ECS, and IMDSv2 are all small enough to implement directly against
+their wire protocols, so we do; see "What's in scope" below.
 
 ## What's in scope
 
