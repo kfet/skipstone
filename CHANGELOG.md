@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-05-06
+
 ### Added
 - `EventContentBlockDelta` now decodes `reasoningContent.redactedContent`
   (encrypted reasoning) and a generic `citation` raw payload.
@@ -31,4 +33,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and event-stream framing in a separate `e2e/` module.
 - MIT license; GitHub Actions CI on Go 1.21 (floor) and latest stable.
 
-[Unreleased]: https://github.com/kfet/skipstone/commits/main
+[Unreleased]: https://github.com/kfet/skipstone/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/kfet/skipstone/releases/tag/v0.1.0
