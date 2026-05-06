@@ -1,6 +1,13 @@
-.PHONY: all test test-fast run-tests check fmt fmtcheck vet cover open_coverage e2e tidy
+.PHONY: all default test test-fast run-tests check fmt fmtcheck vet open_coverage e2e tidy
 
-all: test
+# Default target: cover everything, fast.
+# Runs gofmt + vet across both modules, unit tests with 100% coverage gate
+# (cached, no race), and the e2e cross-check against aws-sdk-go-v2.
+# Use `make test` for the strict pass with -race -shuffle=on (what CI runs).
+default: test-fast e2e
+	@echo "✓ all green"
+
+all: default
 
 # check runs the static gates (gofmt + go vet) across both modules.
 check: fmtcheck vet
@@ -46,10 +53,12 @@ run-tests: check
 	fi
 	@echo "✓ coverage 100%"
 
+# Strict test pass: clean cache, race detector, shuffled. This is what CI runs.
 test:
 	@go clean -testcache
 	@GOGC=off $(MAKE) run-tests TEST_FLAGS="-race -shuffle=on"
 
+# Fast test pass: cached, no race.
 test-fast:
 	@$(MAKE) run-tests
 

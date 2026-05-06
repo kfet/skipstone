@@ -155,73 +155,24 @@ func (s *Stream) Close() error
 
 ## House rules
 
-### 100% test coverage is the gate
-
-`make test` runs `go test -race -shuffle=on -cover ./...` and **fails the build
-if coverage is below 100%** (excluding paths in `.covignore`). This is
-non-negotiable — the whole library is small enough that 100% is achievable and
-gives us confidence to keep dependencies at zero.
-
-Mechanics:
-- `coverage.tmp.out` is the raw profile.
-- `.covignore` is a list of regexes (one per line, passed to `grep -v -E -f`)
-  excluding paths from the gate. Today: only the `e2e/` module is excluded
-  (it lives in its own go.mod and isn't part of the main coverage profile
-  anyway, but the line is there as a guard if files ever move).
-- `coverage.out` is the filtered profile that the 100% check runs against.
-- Add a path to `.covignore` only when there's a concrete reason it can't be
-  unit-tested (e.g. it's a separate go.mod / e2e / hand-verified vendor
-  fixture). Discuss before adding new entries.
-
-If a line is genuinely impossible to cover (truly dead code), **delete the
-line** rather than ignoring it. We had several "defensive" checks that the
-type system or earlier validation already guaranteed; we removed them.
-
-### Zero runtime dependencies
-
-`go.mod` must list **no `require` block** beyond Go stdlib.
-`go test ./...` must work with **no module download**.
-If you find yourself wanting an external dep, the answer is "write 30 LOC
-instead" — every module we ship has a stdlib equivalent that's small enough.
-
-The `e2e` module's `go.mod` is the only exception, and it's intentional.
-
-### Idiomatic Go, simple code
-
-- Small, focused packages.
-- Custom JSON marshalling lives next to the types it serializes.
-- Errors are descriptive (`"bedrocklight: ..."` prefix) and wrap with `%w`.
-- No `init()` magic, no global state, no `sync.Mutex` where `sync.Once` or
-  `atomic` would do.
-- Tests use stdlib `testing` only — no testify.
+- **100% test coverage**, enforced at build time (`make test`). Use
+  `.covignore` only for files/dirs that are deliberately out of the unit
+  coverage profile (e.g. the `e2e/` module). If a line is genuinely
+  uncoverable, delete it instead of ignoring it.
+- **Zero runtime dependencies.** `go.mod` lists no `require` block; `go test
+  ./...` works offline. The `e2e/` module is the only exception. If you want
+  to pull in a dep, write 30 LOC instead.
+- **Idiomatic Go, simple code.** Small focused packages, stdlib-only tests,
+  errors prefixed with `"bedrocklight: "` and wrapped with `%w`.
 
 ### Adding new features
 
-Order of operations for any user-visible change:
-
-1. **Justify it**: does it require touching this library, or could the caller
-   handle it? (Many things — extra retry policies, custom logging — belong in
-   user code, not here.)
-2. **Update this `AGENTS.md`** if scope changes.
-3. **Write a failing test first** (especially for bug fixes — confirms the
-   test catches the bug).
-4. **Implement.**
-5. **Cover the change to 100%.** Don't add `.covignore` entries.
-6. **Cross-check in `e2e/`** if the change touches SigV4 or event-stream
-   framing — those are the parts most likely to have subtle bugs that only a
-   reference implementation catches.
-
-### Do not
-
-- Add `time.Sleep` to tests; use `WithBackoff(func(int) time.Duration { return 0 })`
-  or `WithNow` to control timing deterministically.
-- Add a global logger. Take an `io.Writer` or callback option if logging is
-  truly needed (it isn't, today).
-- Catch panics. The library never panics on caller input; if it would, fix
-  the input validation instead.
-- Use `interface{}` / `any` in public types where a concrete type fits.
-  `Event.Decoded` is `any` because the decoded type depends on `Type` —
-  that's the legitimate use.
+1. Justify it — does it belong in this library, or in caller code?
+2. Update this `AGENTS.md` if scope changes.
+3. Failing test first.
+4. Implement.
+5. Cover to 100%. Don't add `.covignore` entries.
+6. Cross-check in `e2e/` if the change touches SigV4 or event-stream framing.
 
 ## Roadmap
 
@@ -234,23 +185,14 @@ These are explicitly **deferred** until a real user need surfaces:
 - Optional `httptrace` hooks for debugging.
 - Pluggable retry classifier (right now retries are hardcoded on 429/5xx).
 
-## Out of scope, forever (probably)
+## Out of scope
 
 - Other AWS services. If you need S3, use the SDK.
-- Synchronous (non-streaming) `Converse`. fir doesn't need it; if you do,
-  fork.
+- Synchronous (non-streaming) `Converse`.
 - Any feature that requires an outbound network call to a non-Bedrock
   endpoint (STS, SSO portal, OIDC). Those belong in the credential-acquisition
   step, which we delegate to upstream tools by design.
 
-## Quick reference
+## Build
 
-```bash
-make test         # 100% coverage gate, race detector, shuffled
-make test-fast    # cached, no race
-make check        # gofmt + go vet, both modules
-make fmt          # gofmt -w, both modules
-make e2e          # cross-check against AWS SDK
-make tidy         # go mod tidy in both modules
-make open_coverage
-```
+Run `make`.
