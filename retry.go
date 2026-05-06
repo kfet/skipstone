@@ -19,10 +19,6 @@ func defaultBackoff(attempt int) time.Duration {
 	return d
 }
 
-func shouldRetry(code int) bool {
-	return code == 429 || (code >= 500 && code < 600)
-}
-
 // shouldRetry consults the configured RetryClassifier or falls back to the
 // default policy: always retry on transport error, retry HTTP 429 / 5xx.
 func (c *Client) shouldRetry(resp *http.Response, err error) bool {
@@ -32,7 +28,8 @@ func (c *Client) shouldRetry(resp *http.Response, err error) bool {
 	if err != nil {
 		return true
 	}
-	return shouldRetry(resp.StatusCode)
+	code := resp.StatusCode
+	return code == 429 || (code >= 500 && code < 600)
 }
 
 func retryAfter(resp *http.Response) time.Duration {

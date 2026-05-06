@@ -90,9 +90,10 @@ func TestConverseStream_RequestBodyMatchesAWSSDK(t *testing.T) {
 	// --- aws-sdk-go-v2 bedrockruntime ---
 	sdkRT := &captureRT{}
 	sdk := bedrockruntime.New(bedrockruntime.Options{
-		Region:      "us-east-1",
-		Credentials: awssdk.NewCredentialsCache(staticCreds{}),
-		HTTPClient:  &http.Client{Transport: sdkRT},
+		Region:           "us-east-1",
+		Credentials:      awssdk.NewCredentialsCache(staticCreds{}),
+		HTTPClient:       &http.Client{Transport: sdkRT},
+		RetryMaxAttempts: 1, // captureRT short-circuits with errStop; don't retry it
 		BaseEndpoint: awssdk.String(
 			"https://bedrock-runtime.us-east-1.amazonaws.com"),
 	})
@@ -153,9 +154,6 @@ func (staticCreds) Retrieve(context.Context) (awssdk.Credentials, error) {
 		CanExpire:       false,
 	}, nil
 }
-
-// rawDoc helpers removed: bedrockruntime exposes its own document.NewLazyDocument
-// for InputSchema content.
 
 func mustJSON(t *testing.T, b []byte) any {
 	t.Helper()
