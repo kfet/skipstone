@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kfet/bedrock-light/internal/awsini"
+	"github.com/kfet/skipstone/internal/awsini"
 )
 
 // Value is a set of resolved credentials. Expires is zero for non-temporary creds.

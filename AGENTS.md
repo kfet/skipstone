@@ -1,4 +1,4 @@
-# AGENTS.md — bedrock-light
+# AGENTS.md — skipstone
 
 ## What this project is
 
@@ -20,13 +20,13 @@ The full AWS SDK is built to support every AWS service, every credential
 source, and every endpoint variation. For a project that calls one Bedrock API
 with credentials already on disk, that's massive overkill:
 
-| Concern | AWS SDK | bedrock-light |
+| Concern | AWS SDK | skipstone |
 |---|---|---|
 | Runtime modules | 16 | 0 |
 | Module cache | ~58 MB | 0 |
 | Credential sources | env, profile, SSO+OIDC refresh, STS chains, IMDS, ECS, IRSA, MFA, web identity, credential_process | env, profile, credential_process, STS AssumeRole chains (incl. MFA), IRSA, ECS, IMDSv2 |
 | APIs | all of Bedrock + STS + SSO + … | `ConverseStream` (+ STS for AssumeRole / web identity) |
-| Type ergonomics | `brtypes.ContentBlockMemberText{Value: brtypes.TextBlock{...}}` | `bedrocklight.Block{Text: "..."}` |
+| Type ergonomics | `brtypes.ContentBlockMemberText{Value: brtypes.TextBlock{...}}` | `skipstone.Block{Text: "..."}` |
 
 We **deliberately don't** support the SSO login flow (OIDC device-code +
 token cache refresh) — that's the one painful, security-sensitive flow we
@@ -79,7 +79,7 @@ below describes responsibilities, not individual files — refer to the source
 or `go doc` for the file-level breakdown.
 
 ```
-bedrocklight/      root package — public API
+skipstone/      root package — public API
                    (Client, ConverseStream, Stream, Event*, options, types)
 
 ├── creds/         credential resolver chain
@@ -108,7 +108,7 @@ sub-API surface.
 
 ### Why `e2e/` is a separate Go module
 
-The whole point of bedrock-light is to **not** depend on the AWS SDK. But we
+The whole point of skipstone is to **not** depend on the AWS SDK. But we
 still want to verify behavioural equivalence for the high-risk parts
 (SigV4 + event-stream framing). Keeping the cross-checks in a separate module
 with its own `go.mod` means:
@@ -163,7 +163,7 @@ func (s *Stream) Close() error
   ./...` works offline. The `e2e/` module is the only exception. If you want
   to pull in a dep, write 30 LOC instead.
 - **Idiomatic Go, simple code.** Small focused packages, stdlib-only tests,
-  errors prefixed with `"bedrocklight: "` and wrapped with `%w`.
+  errors prefixed with `"skipstone: "` and wrapped with `%w`.
 
 ### Adding new features
 

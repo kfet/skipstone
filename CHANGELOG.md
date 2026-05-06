@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WithRetryClassifier(func(*http.Response, error) bool)` — pluggable retry
   policy. Default behaviour (retry transport errors, 429, and 5xx) is
   preserved when not set.
-- Initial public release of `bedrock-light`: zero-dependency Go client for
+- Initial public release of `skipstone`: zero-dependency Go client for
   Amazon Bedrock's `ConverseStream` API.
 - SigV4 request signing (stdlib only).
 - AWS event-stream response decoding (prelude + headers + payload + CRC32).
@@ -31,4 +31,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and event-stream framing in a separate `e2e/` module.
 - MIT license; GitHub Actions CI on Go 1.21 (floor) and latest stable.
 
-[Unreleased]: https://github.com/kfet/bedrock-light/commits/main
+[Unreleased]: https://github.com/kfet/skipstone/commits/main

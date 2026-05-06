@@ -1,9 +1,9 @@
-package bedrocklight
+package skipstone
 
 import (
 	"net/http"
 
-	"github.com/kfet/bedrock-light/eventstream"
+	"github.com/kfet/skipstone/eventstream"
 )
 
 // Stream is a typed iterator over the events of a ConverseStream response.

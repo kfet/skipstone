@@ -59,7 +59,7 @@ func TestWebIdentitySuccess(t *testing.T) {
 			t.Errorf("token=%s", r.Form.Get("WebIdentityToken"))
 		}
 		if !strings.HasPrefix(r.Form.Get("RoleSessionName"), "session-") &&
-			!strings.HasPrefix(r.Form.Get("RoleSessionName"), "bedrock-light-") {
+			!strings.HasPrefix(r.Form.Get("RoleSessionName"), "skipstone-") {
 			t.Errorf("session name=%s", r.Form.Get("RoleSessionName"))
 		}
 		w.Write([]byte(stsOKResp))

@@ -1,4 +1,4 @@
-package bedrocklight
+package skipstone
 
 import (
 	"encoding/json"
@@ -26,7 +26,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 		count++
 	}
 	if count > 1 {
-		return nil, errors.New("bedrocklight: Block has multiple non-nil fields")
+		return nil, errors.New("skipstone: Block has multiple non-nil fields")
 	}
 	switch {
 	case b.Image != nil:
@@ -57,11 +57,11 @@ func (tc ToolChoice) MarshalJSON() ([]byte, error) {
 		return []byte(`{"any":{}}`), nil
 	case ToolChoiceTool:
 		if tc.Name == "" {
-			return nil, errors.New("bedrocklight: ToolChoice.Type=tool requires Name")
+			return nil, errors.New("skipstone: ToolChoice.Type=tool requires Name")
 		}
 		return json.Marshal(map[string]any{"tool": map[string]string{"name": tc.Name}})
 	default:
-		return nil, errors.New("bedrocklight: unknown ToolChoice.Type: " + string(tc.Type))
+		return nil, errors.New("skipstone: unknown ToolChoice.Type: " + string(tc.Type))
 	}
 }
 
@@ -92,13 +92,13 @@ type toolSpec struct {
 // buildRequestBody assembles the JSON body and validates the input shape.
 func buildRequestBody(in *ConverseStreamInput) ([]byte, error) {
 	if in == nil {
-		return nil, errors.New("bedrocklight: nil input")
+		return nil, errors.New("skipstone: nil input")
 	}
 	if in.ModelID == "" {
-		return nil, errors.New("bedrocklight: missing ModelID")
+		return nil, errors.New("skipstone: missing ModelID")
 	}
 	if len(in.Messages) == 0 {
-		return nil, errors.New("bedrocklight: at least one Message required")
+		return nil, errors.New("skipstone: at least one Message required")
 	}
 	body := requestBody{
 		Messages:                     in.Messages,

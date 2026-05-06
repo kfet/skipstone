@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kfet/bedrock-light/internal/awsini"
-	"github.com/kfet/bedrock-light/sigv4"
+	"github.com/kfet/skipstone/internal/awsini"
+	"github.com/kfet/skipstone/sigv4"
 )
 
 // assumeRoleFromProfile resolves source creds (via source_profile or
@@ -43,7 +43,7 @@ func assumeRoleFromProfile(ctx context.Context, cfg *Config, cred, conf awsini.F
 	region := resolveRegion(cfg, profileGet(cred, conf, profile, "region"))
 	sessionName := profileGet(cred, conf, profile, "role_session_name")
 	if sessionName == "" {
-		sessionName = "bedrock-light-" + strconv.FormatInt(cfg.now().UnixNano(), 10)
+		sessionName = "skipstone-" + strconv.FormatInt(cfg.now().UnixNano(), 10)
 	}
 	durationStr := profileGet(cred, conf, profile, "duration_seconds")
 	externalID := profileGet(cred, conf, profile, "external_id")

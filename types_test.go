@@ -1,4 +1,4 @@
-package bedrocklight
+package skipstone
 
 import (
 	"encoding/json"

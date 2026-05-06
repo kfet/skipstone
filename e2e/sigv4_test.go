@@ -1,4 +1,4 @@
-// SigV4 cross-check: sign the same request with bedrock-light and the AWS SDK
+// SigV4 cross-check: sign the same request with skipstone and the AWS SDK
 // SigV4 signer; the Authorization headers must match byte-for-byte.
 package e2e
 
@@ -13,7 +13,7 @@ import (
 
 	awsv4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 
-	"github.com/kfet/bedrock-light/sigv4"
+	"github.com/kfet/skipstone/sigv4"
 )
 
 func TestSigV4MatchesAWSSDK(t *testing.T) {
@@ -32,7 +32,7 @@ func TestSigV4MatchesAWSSDK(t *testing.T) {
 		ak, sk, st string
 	}{"AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", ""}
 
-	// bedrock-light
+	// skipstone
 	light := mkReq()
 	if err := (&sigv4.Signer{Region: "us-east-1", Service: "bedrock"}).Sign(
 		light, sigv4.Credentials{AccessKeyID: creds.ak, SecretAccessKey: creds.sk}, now,
@@ -40,12 +40,12 @@ func TestSigV4MatchesAWSSDK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// AWS SDK signer (same payload hash as bedrock-light: hex-sha256(body))
+	// AWS SDK signer (same payload hash as skipstone: hex-sha256(body))
 	sdkReq := mkReq()
 	// AWS SDK requires Host explicitly; mirror what our signer does.
 	sdkReq.Header.Set("Host", sdkReq.URL.Host)
 	payloadHash := hexSHA256(body)
-	// bedrock-light always sets x-amz-content-sha256; pre-set it on the SDK
+	// skipstone always sets x-amz-content-sha256; pre-set it on the SDK
 	// request so the SDK signer covers it too.
 	sdkReq.Header.Set("X-Amz-Content-Sha256", payloadHash)
 	if err := awsv4.NewSigner().SignHTTP(

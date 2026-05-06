@@ -1,4 +1,4 @@
-// ConverseStream cross-check: build the same request through bedrock-light
+// ConverseStream cross-check: build the same request through skipstone
 // and aws-sdk-go-v2's bedrockruntime client, capture the JSON request body
 // each one POSTs, and assert they're structurally equivalent.
 //
@@ -23,7 +23,7 @@ import (
 	brdoc "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/document"
 	brtypes "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 
-	bl "github.com/kfet/bedrock-light"
+	bl "github.com/kfet/skipstone"
 )
 
 // captureRT records the body of the first request and short-circuits the
@@ -49,7 +49,7 @@ func TestConverseStream_RequestBodyMatchesAWSSDK(t *testing.T) {
 	stop := []string{"\n\n"}
 	schema := json.RawMessage(`{"type":"object","properties":{"q":{"type":"string"}},"required":["q"]}`)
 
-	// --- bedrock-light ---
+	// --- skipstone ---
 	lightRT := &captureRT{}
 	cl, err := bl.NewClient(
 		bl.WithEndpoint("https://bedrock-runtime.us-east-1.amazonaws.com"),
@@ -84,7 +84,7 @@ func TestConverseStream_RequestBodyMatchesAWSSDK(t *testing.T) {
 		},
 	})
 	if lightRT.body == nil {
-		t.Fatal("bedrock-light: no request captured")
+		t.Fatal("skipstone: no request captured")
 	}
 
 	// --- aws-sdk-go-v2 bedrockruntime ---

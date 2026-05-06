@@ -1,4 +1,4 @@
-package bedrocklight
+package skipstone
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kfet/bedrock-light/creds"
-	"github.com/kfet/bedrock-light/eventstream"
+	"github.com/kfet/skipstone/creds"
+	"github.com/kfet/skipstone/eventstream"
 )
 
 func newTestServer(t *testing.T, h http.HandlerFunc) (*httptest.Server, *Client) {

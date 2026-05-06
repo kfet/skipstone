@@ -1,5 +1,5 @@
 // Event-stream cross-check: decode a frame produced by the AWS SDK encoder
-// using bedrock-light's decoder, and round-trip the other way.
+// using skipstone's decoder, and round-trip the other way.
 package e2e
 
 import (
@@ -8,7 +8,7 @@ import (
 
 	awses "github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream"
 
-	"github.com/kfet/bedrock-light/eventstream"
+	"github.com/kfet/skipstone/eventstream"
 )
 
 func TestEventStream_DecodeAWSEncodedFrame(t *testing.T) {
@@ -26,7 +26,7 @@ func TestEventStream_DecodeAWSEncodedFrame(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Decode with bedrock-light.
+	// Decode with skipstone.
 	d := eventstream.NewDecoder(&buf)
 	got, err := d.Next()
 	if err != nil {

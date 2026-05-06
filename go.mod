@@ -1,3 +1,3 @@
-module github.com/kfet/bedrock-light
+module github.com/kfet/skipstone
 
 go 1.21

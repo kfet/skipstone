@@ -27,7 +27,7 @@ func webIdentityProvider(ctx context.Context, cfg *Config) (Value, error) {
 	token := strings.TrimSpace(string(tokenBytes))
 	sessionName := cfg.env("AWS_ROLE_SESSION_NAME")
 	if sessionName == "" {
-		sessionName = "bedrock-light-" + strconv.FormatInt(cfg.now().UnixNano(), 10)
+		sessionName = "skipstone-" + strconv.FormatInt(cfg.now().UnixNano(), 10)
 	}
 
 	region := resolveRegion(cfg, "")

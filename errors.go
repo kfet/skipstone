@@ -1,4 +1,4 @@
-package bedrocklight
+package skipstone
 
 import "strconv"
 
@@ -11,5 +11,5 @@ type APIError struct {
 
 // Error implements error.
 func (e *APIError) Error() string {
-	return "bedrocklight: HTTP " + strconv.Itoa(e.StatusCode) + ": " + string(e.Body)
+	return "skipstone: HTTP " + strconv.Itoa(e.StatusCode) + ": " + string(e.Body)
 }

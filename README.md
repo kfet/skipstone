@@ -1,17 +1,14 @@
-# bedrock-light
+# skipstone
 
 <!-- TODO(badges): once the GitHub repo is published, add:
-       - CI status:    ![CI](https://github.com/kfet/bedrock-light/actions/workflows/test.yml/badge.svg)
-       - pkg.go.dev:   [![Go Reference](https://pkg.go.dev/badge/github.com/kfet/bedrock-light.svg)](https://pkg.go.dev/github.com/kfet/bedrock-light)
-       - Go report:    [![Go Report Card](https://goreportcard.com/badge/github.com/kfet/bedrock-light)](https://goreportcard.com/report/github.com/kfet/bedrock-light)
+       - CI status:    ![CI](https://github.com/kfet/skipstone/actions/workflows/test.yml/badge.svg)
+       - pkg.go.dev:   [![Go Reference](https://pkg.go.dev/badge/github.com/kfet/skipstone.svg)](https://pkg.go.dev/github.com/kfet/skipstone)
+       - Go report:    [![Go Report Card](https://goreportcard.com/badge/github.com/kfet/skipstone)](https://goreportcard.com/report/github.com/kfet/skipstone)
 -->
 
 Minimal, zero-dependency Go client for **Amazon Bedrock `ConverseStream`**.
 
-Stdlib only. No `aws-sdk-go-v2`, no `smithy-go`. Designed for tools (like
-[fir](https://github.com/kfet/fir)) that need exactly one Bedrock API and
-acquire credentials through external tooling such as
-[granted.dev `assume`](https://granted.dev/) or long-term IAM keys.
+Stdlib only. No `aws-sdk-go-v2`, no `smithy-go`. Designed for tools that need exactly one Bedrock API and acquire credentials through external tooling such as [granted.dev `assume`](https://granted.dev/) or long-term IAM keys.
 
 ## What's supported
 
@@ -52,14 +49,11 @@ acquire credentials through external tooling such as
 - SSO login flow / token cache (use `aws sso login` or `assume`)
 - Other Bedrock APIs (`InvokeModel`, non-stream `Converse`)
 
-If you need any of those, use the official AWS SDK.
-
 ## Dependencies
 
 Runtime: **none** (Go stdlib only).
 Tests: stdlib only.
-e2e module (separate `go.mod`): pulls the AWS SDK at build time only, to
-cross-check SigV4 + event-stream behavior against the reference implementation.
+e2e module (separate `go.mod`): pulls the AWS SDK at build time only, to cross-check SigV4 + event-stream behavior against the reference implementation.
 
 ## License
 

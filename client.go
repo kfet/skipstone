@@ -1,4 +1,4 @@
-package bedrocklight
+package skipstone
 
 import (
 	"bytes"
@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kfet/bedrock-light/creds"
-	"github.com/kfet/bedrock-light/eventstream"
-	"github.com/kfet/bedrock-light/internal/awsini"
-	"github.com/kfet/bedrock-light/sigv4"
+	"github.com/kfet/skipstone/creds"
+	"github.com/kfet/skipstone/eventstream"
+	"github.com/kfet/skipstone/internal/awsini"
+	"github.com/kfet/skipstone/sigv4"
 )
 
 // Client is a Bedrock ConverseStream client.
@@ -179,7 +179,7 @@ func (c *Client) ConverseStream(ctx context.Context, in *ConverseStreamInput) (*
 
 		v, err := c.creds.Retrieve(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("bedrocklight: credentials: %w", err)
+			return nil, fmt.Errorf("skipstone: credentials: %w", err)
 		}
 		signer := &sigv4.Signer{Region: c.region, Service: "bedrock"}
 		if err := signer.Sign(req, sigv4.Credentials{
@@ -187,7 +187,7 @@ func (c *Client) ConverseStream(ctx context.Context, in *ConverseStreamInput) (*
 			SecretAccessKey: v.SecretAccessKey,
 			SessionToken:    v.SessionToken,
 		}, c.now()); err != nil {
-			return nil, fmt.Errorf("bedrocklight: sign: %w", err)
+			return nil, fmt.Errorf("skipstone: sign: %w", err)
 		}
 
 		resp, err = c.httpClient.Do(req)
@@ -198,7 +198,7 @@ func (c *Client) ConverseStream(ctx context.Context, in *ConverseStreamInput) (*
 				}
 				continue
 			}
-			return nil, fmt.Errorf("bedrocklight: do: %w", err)
+			return nil, fmt.Errorf("skipstone: do: %w", err)
 		}
 		if attempt < c.maxRetries && c.shouldRetry(resp, nil) {
 			delay := retryAfter(resp) // honor Retry-After if present
