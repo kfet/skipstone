@@ -2,7 +2,6 @@ package creds
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/xml"
 	"errors"
@@ -135,7 +134,7 @@ func callAssumeRole(ctx context.Context, cfg *Config, region string, srcCreds Va
 	body := form.Encode()
 
 	endpoint := stsEndpoint(cfg, region)
-	req, _ := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader([]byte(body)))
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 	req.Header.Set("Accept", "application/xml")
 

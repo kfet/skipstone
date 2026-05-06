@@ -40,7 +40,7 @@ func webIdentityProvider(ctx context.Context, cfg *Config) (Value, error) {
 	form.Set("RoleSessionName", sessionName)
 	form.Set("WebIdentityToken", token)
 
-	req, _ := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(form.Encode()))
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/xml")
 

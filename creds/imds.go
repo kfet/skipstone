@@ -34,7 +34,7 @@ func imdsProvider(ctx context.Context, cfg *Config) (Value, error) {
 	defer cancel()
 
 	// 1. Fetch session token.
-	tokReq, _ := http.NewRequestWithContext(tctx, "PUT", endpoint+"/latest/api/token", nil)
+	tokReq, _ := http.NewRequestWithContext(tctx, http.MethodPut, endpoint+"/latest/api/token", nil)
 	tokReq.Header.Set("X-aws-ec2-metadata-token-ttl-seconds", imdsTokenTTL)
 	tokResp, err := hc.Do(tokReq)
 	if err != nil {
@@ -93,7 +93,7 @@ func imdsProvider(ctx context.Context, cfg *Config) (Value, error) {
 }
 
 func imdsGet(ctx context.Context, hc *http.Client, url, token string) (string, error) {
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	req.Header.Set("X-aws-ec2-metadata-token", token)
 	resp, err := hc.Do(req)
 	if err != nil {
