@@ -74,32 +74,37 @@ the value before any code is written.
 
 ## Architecture
 
+The library is laid out as a small set of focused packages. The structure
+below describes responsibilities, not individual files — refer to the source
+or `go doc` for the file-level breakdown.
+
 ```
-bedrocklight/                 root package — public API
-├── doc.go                    package doc
-├── types.go                  Message, Block, Tool, ToolChoice, ConverseStreamInput
-├── request.go                JSON marshalling + buildRequestBody
-├── client.go                 Client, NewClient, options, ConverseStream
-├── stream.go                 Stream, Recv, Close
-├── events.go                 Event*, decodeEvent
-├── errors.go                 APIError
-├── retry.go                  backoff + Retry-After helpers
-│
-├── creds/                    credential resolver (chain)
-│   ├── creds.go              env, profile, credential_process, chain machinery
-│   ├── imds.go               EC2 IMDSv2
-│   ├── ecs.go                ECS task creds
-│   ├── webidentity.go        AssumeRoleWithWebIdentity (IRSA)
-│   └── assumerole.go         STS AssumeRole, source_profile chains, MFA
-├── sigv4/                    AWS Signature Version 4 signer
-├── eventstream/              AWS event-stream frame decoder + encoder
+bedrocklight/      root package — public API
+                   (Client, ConverseStream, Stream, Event*, options, types)
+
+├── creds/         credential resolver chain
+│                  env • shared profile • credential_process
+│                  STS AssumeRole (incl. MFA, source_profile, credential_source)
+│                  IRSA (AssumeRoleWithWebIdentity) • ECS task creds • EC2 IMDSv2
+
+├── sigv4/         AWS Signature Version 4 signer (bounded JSON / form bodies)
+
+├── eventstream/   AWS event-stream frame codec
+│                  (prelude + headers + payload + CRC32)
+
 ├── internal/
-│   └── awsini/               AWS shared-ini parser (config + credentials)
-│
-└── e2e/                      separate go.mod — AWS SDK pulled only here
-    ├── sigv4_test.go         byte-equal Authorization vs aws-sdk-go-v2 v4 signer
-    └── eventstream_test.go   round-trip through aws-sdk-go-v2 eventstream
+│   └── awsini/    AWS shared-ini parser for ~/.aws/{config,credentials}
+
+└── e2e/           separate go.mod — AWS SDK pulled only here
+                   cross-checks SigV4 + event-stream against aws-sdk-go-v2
 ```
+
+The root package owns the public API; everything under it is an
+implementation detail that may move or split without a major version bump.
+`internal/` is enforced by the Go toolchain; `creds/`, `sigv4/`, and
+`eventstream/` are exported only because their types appear in option
+signatures or are useful in isolation, not because they're a stable
+sub-API surface.
 
 ### Why `e2e/` is a separate Go module
 
