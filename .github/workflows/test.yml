@@ -15,11 +15,15 @@ jobs:
         # 1.21 = declared floor in go.mod; 1.26 = latest stable.
         go: ["1.21", "1.26"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go }}
           check-latest: true
+          # skipstone has no runtime deps and therefore no go.sum.
+          # Disable setup-go's module cache to silence the
+          # "Dependencies file is not found" warning.
+          cache: false
       - run: go version
       # `make test` runs gofmt + vet + race + shuffle + 100% coverage gate.
       - run: make test
@@ -28,9 +32,12 @@ jobs:
     name: e2e (cross-check vs aws-sdk-go-v2)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.26"
           check-latest: true
+          # The e2e/ module does pull aws-sdk-go-v2 + a go.sum, but
+          # we keep cache off here too so both jobs behave the same.
+          cache: false
       - run: make e2e
