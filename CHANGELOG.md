@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `EventContentBlockDelta` now decodes `reasoningContent.redactedContent`
+  (encrypted reasoning) and a generic `citation` raw payload.
+- `EventMetadata` now decodes `trace`, `performanceConfig`, and `serviceTier`.
 - `WithHTTPTrace(func(context.Context) *httptrace.ClientTrace)` — opt-in
   per-request `httptrace` hook for debugging connection / TLS / DNS timings.
   No global state; nothing is logged unless the caller's trace does so.

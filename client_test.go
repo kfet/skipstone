@@ -658,3 +658,33 @@ func TestWithHTTPTrace_NilFactoryResult(t *testing.T) {
 	}
 	stream.Close()
 }
+
+func TestEventReasoningRedacted(t *testing.T) {
+	raw := []byte(`{"contentBlockIndex":0,"delta":{"reasoningContent":{"redactedContent":"YWJj"}}}`)
+	v := decodeEvent("contentBlockDelta", raw).(EventContentBlockDelta)
+	if string(v.Delta.ReasoningContent.RedactedContent) != "abc" {
+		t.Errorf("redacted: %q", v.Delta.ReasoningContent.RedactedContent)
+	}
+}
+
+func TestEventCitationDelta(t *testing.T) {
+	raw := []byte(`{"contentBlockIndex":0,"delta":{"citation":{"title":"doc","source":"s3://x"}}}`)
+	v := decodeEvent("contentBlockDelta", raw).(EventContentBlockDelta)
+	if !strings.Contains(string(v.Delta.Citation), `"title":"doc"`) {
+		t.Errorf("citation: %s", v.Delta.Citation)
+	}
+}
+
+func TestEventMetadataExtras(t *testing.T) {
+	raw := []byte(`{"usage":{"inputTokens":1},"metrics":{"latencyMs":2},"trace":{"guardrail":{}},"performanceConfig":{"latency":"standard"},"serviceTier":"priority"}`)
+	v := decodeEvent("metadata", raw).(EventMetadata)
+	if v.ServiceTier != "priority" {
+		t.Errorf("tier: %q", v.ServiceTier)
+	}
+	if !strings.Contains(string(v.Trace), "guardrail") {
+		t.Errorf("trace: %s", v.Trace)
+	}
+	if !strings.Contains(string(v.PerformanceConfig), "standard") {
+		t.Errorf("perf: %s", v.PerformanceConfig)
+	}
+}

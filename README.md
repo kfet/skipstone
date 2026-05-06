@@ -35,7 +35,11 @@ acquire credentials through external tooling such as
 - Text, image, tool_use, tool_result, reasoning, cache_point content blocks
 - Tool config (incl. tool choice)
 - Inference config (max tokens, temperature, top-p, stop sequences)
-- Streaming events: messageStart, contentBlockStart/Delta/Stop, messageStop, metadata
+- Streaming events: messageStart, contentBlockStart/Delta/Stop, messageStop,
+  metadata. Decoded delta covers text, tool_use input, reasoning text /
+  signature / redacted content, and citation payloads. Decoded metadata
+  covers token usage (incl. cache read/write), latency, guardrail trace,
+  performance config, and service tier.
 
 ### Wire
 - SigV4 request signing (no presigning, no streaming-payload signing)

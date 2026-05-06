@@ -30,9 +30,14 @@ type EventContentBlockDelta struct {
 			Input string `json:"input"`
 		} `json:"toolUse,omitempty"`
 		ReasoningContent *struct {
-			Text      string `json:"text,omitempty"`
-			Signature string `json:"signature,omitempty"`
+			Text            string `json:"text,omitempty"`
+			Signature       string `json:"signature,omitempty"`
+			RedactedContent []byte `json:"redactedContent,omitempty"`
 		} `json:"reasoningContent,omitempty"`
+		// Citation is emitted when the model attributes generated text to a
+		// source document. The shape is intentionally generic — Bedrock keeps
+		// extending citation locations and this surface is still in flux.
+		Citation json.RawMessage `json:"citation,omitempty"`
 	} `json:"delta"`
 }
 
@@ -59,6 +64,15 @@ type EventMetadata struct {
 	Metrics struct {
 		LatencyMs int `json:"latencyMs"`
 	} `json:"metrics"`
+	// Trace carries guardrail / model-trace info when enabled. Kept as raw
+	// JSON because the Bedrock trace shape is service-specific and unstable.
+	Trace json.RawMessage `json:"trace,omitempty"`
+	// PerformanceConfig echoes the resolved performance tier for the request
+	// (e.g. {"latency":"standard"}).
+	PerformanceConfig json.RawMessage `json:"performanceConfig,omitempty"`
+	// ServiceTier echoes the processing tier actually used to serve the
+	// request (e.g. "standard", "priority").
+	ServiceTier string `json:"serviceTier,omitempty"`
 }
 
 // decodeEvent parses raw into the typed payload for known event kinds, or
