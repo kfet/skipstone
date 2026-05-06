@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `WithRetryClassifier(func(*http.Response, error) bool)` — pluggable retry
+  policy. Default behaviour (retry transport errors, 429, and 5xx) is
+  preserved when not set.
 - Initial public release of `bedrock-light`: zero-dependency Go client for
   Amazon Bedrock's `ConverseStream` API.
 - SigV4 request signing (stdlib only).

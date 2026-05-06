@@ -26,6 +26,7 @@ type Client struct {
 	now        func() time.Time
 	maxRetries int
 	backoff    func(attempt int) time.Duration
+	classifier RetryClassifier
 }
 
 // Option configures a Client.
@@ -64,6 +65,23 @@ func WithRetries(n int) Option { return func(cl *Client) { cl.maxRetries = n } }
 // WithBackoff sets the backoff function. Default: 100ms * 2^attempt, capped at 5s.
 func WithBackoff(fn func(attempt int) time.Duration) Option {
 	return func(cl *Client) { cl.backoff = fn }
+}
+
+// RetryClassifier decides whether a request should be retried. It is invoked
+// after every attempt with exactly one of (resp, err) non-nil:
+//
+//   - On a transport-level failure, resp is nil and err is the transport error.
+//   - On a server response, resp is the HTTP response and err is nil. The
+//     response body has not been consumed; the classifier must not read it.
+//
+// The classifier is consulted only while attempts remain (see WithRetries).
+type RetryClassifier func(resp *http.Response, err error) bool
+
+// WithRetryClassifier installs a custom retry classifier. The default
+// behaviour — always retry transport errors, retry HTTP 429 / 5xx — is
+// preserved when this option is not used.
+func WithRetryClassifier(fn RetryClassifier) Option {
+	return func(cl *Client) { cl.classifier = fn }
 }
 
 // NewClient constructs a Client. Region is resolved from (in order):
@@ -159,7 +177,7 @@ func (c *Client) ConverseStream(ctx context.Context, in *ConverseStreamInput) (*
 
 		resp, err = c.httpClient.Do(req)
 		if err != nil {
-			if attempt < c.maxRetries && ctx.Err() == nil {
+			if attempt < c.maxRetries && ctx.Err() == nil && c.shouldRetry(nil, err) {
 				if !sleep(ctx, c.backoff(attempt)) {
 					return nil, ctx.Err()
 				}
@@ -167,7 +185,7 @@ func (c *Client) ConverseStream(ctx context.Context, in *ConverseStreamInput) (*
 			}
 			return nil, fmt.Errorf("bedrocklight: do: %w", err)
 		}
-		if shouldRetry(resp.StatusCode) && attempt < c.maxRetries {
+		if attempt < c.maxRetries && c.shouldRetry(resp, nil) {
 			delay := retryAfter(resp) // honor Retry-After if present
 			if delay <= 0 {
 				delay = c.backoff(attempt)

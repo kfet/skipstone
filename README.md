@@ -41,6 +41,7 @@ acquire credentials through external tooling such as
 - SigV4 request signing (no presigning, no streaming-payload signing)
 - AWS event-stream response decoding (prelude + headers + payload + CRC32)
 - Retry with exponential backoff on 429/5xx, honoring `Retry-After`
+  (override the policy with `WithRetryClassifier`)
 
 ## What's _not_ supported
 

@@ -562,3 +562,55 @@ func TestEventMetadataCacheTokens(t *testing.T) {
 		t.Errorf("got %+v", v.Usage)
 	}
 }
+
+func TestWithRetryClassifier_RetriesOn4xx(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if calls == 1 {
+			w.WriteHeader(418) // not normally retried
+			return
+		}
+		w.Write(eventstream.Encode(map[string]string{":event-type": "messageStop"}, []byte(`{}`)))
+	}))
+	defer srv.Close()
+	cl, _ := NewClient(
+		WithEndpoint(srv.URL),
+		WithRegion("us-east-1"),
+		WithStaticCredentials("A", "B", ""),
+		WithBackoff(func(int) time.Duration { return 0 }),
+		WithRetryClassifier(func(resp *http.Response, err error) bool {
+			return err != nil || (resp != nil && resp.StatusCode == 418)
+		}),
+	)
+	stream, err := cl.ConverseStream(context.Background(), goodInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stream.Close()
+	if calls != 2 {
+		t.Errorf("calls=%d", calls)
+	}
+}
+
+func TestWithRetryClassifier_SuppressesTransportRetry(t *testing.T) {
+	calls := 0
+	hc := &http.Client{Transport: roundTripFn(func(*http.Request) (*http.Response, error) {
+		calls++
+		return nil, errors.New("net fail")
+	})}
+	cl, _ := NewClient(
+		WithEndpoint("http://x"),
+		WithRegion("us-east-1"),
+		WithStaticCredentials("A", "B", ""),
+		WithHTTPClient(hc),
+		WithRetries(3),
+		WithRetryClassifier(func(resp *http.Response, err error) bool { return false }),
+	)
+	if _, err := cl.ConverseStream(context.Background(), goodInput()); err == nil {
+		t.Fatal("expected error")
+	}
+	if calls != 1 {
+		t.Errorf("classifier should have suppressed retries: calls=%d", calls)
+	}
+}
