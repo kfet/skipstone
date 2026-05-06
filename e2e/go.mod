@@ -15,4 +15,4 @@ require (
 	github.com/aws/smithy-go v1.25.1
 )
 
-replace github.com/kfet/skipstone => ..
+replace github.com/kfet/skipstone => ../

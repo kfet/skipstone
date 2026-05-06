@@ -5,6 +5,15 @@ on:
     branches: [main]
   pull_request:
 
+# setup-go@v6 sets GOTOOLCHAIN=local by default, which blocks Go from
+# auto-downloading a newer toolchain to satisfy a higher `go` directive
+# in any go.mod we touch. The matrix `test` job runs `make test`, which
+# vets both modules (root + e2e/). The e2e/ module declares `go 1.24`,
+# so when the matrix runs on Go 1.21 it must be allowed to fetch 1.24
+# transparently — hence GOTOOLCHAIN=auto, restoring v5's behaviour.
+env:
+  GOTOOLCHAIN: auto
+
 jobs:
   test:
     name: test (go ${{ matrix.go }})
