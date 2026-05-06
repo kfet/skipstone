@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
 	"os"
 	"path/filepath"
 	"strings"
@@ -613,4 +614,47 @@ func TestWithRetryClassifier_SuppressesTransportRetry(t *testing.T) {
 	if calls != 1 {
 		t.Errorf("classifier should have suppressed retries: calls=%d", calls)
 	}
+}
+
+func TestWithHTTPTrace(t *testing.T) {
+	gotStart := false
+	_, cl := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write(eventstream.Encode(map[string]string{":event-type": "messageStop"}, []byte(`{}`)))
+	})
+	cl2, _ := NewClient(
+		WithEndpoint(cl.endpoint),
+		WithRegion("us-east-1"),
+		WithStaticCredentials("A", "B", ""),
+		WithHTTPTrace(func(ctx context.Context) *httptrace.ClientTrace {
+			return &httptrace.ClientTrace{
+				GetConn: func(string) { gotStart = true },
+			}
+		}),
+	)
+	stream, err := cl2.ConverseStream(context.Background(), goodInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stream.Close()
+	if !gotStart {
+		t.Error("httptrace hook not called")
+	}
+}
+
+func TestWithHTTPTrace_NilFactoryResult(t *testing.T) {
+	// Factory returning nil must be a no-op (no panic, no context wrap).
+	_, cl := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write(eventstream.Encode(map[string]string{":event-type": "messageStop"}, []byte(`{}`)))
+	})
+	cl2, _ := NewClient(
+		WithEndpoint(cl.endpoint),
+		WithRegion("us-east-1"),
+		WithStaticCredentials("A", "B", ""),
+		WithHTTPTrace(func(ctx context.Context) *httptrace.ClientTrace { return nil }),
+	)
+	stream, err := cl2.ConverseStream(context.Background(), goodInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stream.Close()
 }

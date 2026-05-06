@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -27,6 +28,7 @@ type Client struct {
 	maxRetries int
 	backoff    func(attempt int) time.Duration
 	classifier RetryClassifier
+	trace      func(ctx context.Context) *httptrace.ClientTrace
 }
 
 // Option configures a Client.
@@ -82,6 +84,14 @@ type RetryClassifier func(resp *http.Response, err error) bool
 // preserved when this option is not used.
 func WithRetryClassifier(fn RetryClassifier) Option {
 	return func(cl *Client) { cl.classifier = fn }
+}
+
+// WithHTTPTrace installs a per-request *httptrace.ClientTrace factory. The
+// returned trace (if non-nil) is attached to the outbound request's context
+// via httptrace.WithClientTrace. Strictly opt-in; the library logs nothing
+// and keeps no global state — callers own the trace they install.
+func WithHTTPTrace(fn func(ctx context.Context) *httptrace.ClientTrace) Option {
+	return func(cl *Client) { cl.trace = fn }
 }
 
 // NewClient constructs a Client. Region is resolved from (in order):
@@ -155,6 +165,11 @@ func (c *Client) ConverseStream(ctx context.Context, in *ConverseStreamInput) (*
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 		if err != nil {
 			return nil, err
+		}
+		if c.trace != nil {
+			if t := c.trace(req.Context()); t != nil {
+				req = req.WithContext(httptrace.WithClientTrace(req.Context(), t))
+			}
 		}
 		// Fresh body reader on every attempt.
 		req.Body = io.NopCloser(bytes.NewReader(body))

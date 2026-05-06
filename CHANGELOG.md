@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `WithHTTPTrace(func(context.Context) *httptrace.ClientTrace)` — opt-in
+  per-request `httptrace` hook for debugging connection / TLS / DNS timings.
+  No global state; nothing is logged unless the caller's trace does so.
 - `WithRetryClassifier(func(*http.Response, error) bool)` — pluggable retry
   policy. Default behaviour (retry transport errors, 429, and 5xx) is
   preserved when not set.
