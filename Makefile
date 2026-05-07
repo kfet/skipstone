@@ -40,18 +40,11 @@ vet:
 run-tests: check
 	@tmpfile=$$(mktemp); \
 	trap 'rm -f $$tmpfile' EXIT; \
-	go test -cover $(TEST_FLAGS) ./... -coverprofile=coverage.tmp.out > $$tmpfile 2>&1; \
-	if [ $$? -ne 0 ]; then \
-		cat $$tmpfile; \
-		exit 1; \
+	if ! go test -cover $(TEST_FLAGS) ./... -coverprofile=coverage.tmp.out > $$tmpfile 2>&1; then \
+		cat $$tmpfile; exit 1; \
 	fi
-	@grep -v -E -f .covignore coverage.tmp.out > coverage.out
-	@if go tool cover -func=coverage.out | tail -1 | grep -v '100.0%'; then \
-		echo "ERROR: coverage is not 100% — see coverage.out (make open_coverage)"; \
-		go tool cover -func=coverage.out | grep -v '100.0%' || true; \
-		exit 1; \
-	fi
-	@echo "✓ coverage 100%"
+	@go run github.com/kfet/covgate/cmd/covgate@v0.1.0 \
+		-profile=coverage.tmp.out -out=coverage.out -ignore=.covignore -min=100
 
 # Strict test pass: clean cache, race detector, shuffled. This is what CI runs.
 test:
