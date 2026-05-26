@@ -1,10 +1,9 @@
 # skipstone
 
-<!-- TODO(badges): once the GitHub repo is published, add:
-       - CI status:    ![CI](https://github.com/kfet/skipstone/actions/workflows/test.yml/badge.svg)
-       - pkg.go.dev:   [![Go Reference](https://pkg.go.dev/badge/github.com/kfet/skipstone.svg)](https://pkg.go.dev/github.com/kfet/skipstone)
-       - Go report:    [![Go Report Card](https://goreportcard.com/badge/github.com/kfet/skipstone)](https://goreportcard.com/report/github.com/kfet/skipstone)
--->
+[![CI](https://github.com/kfet/skipstone/actions/workflows/test.yml/badge.svg)](https://github.com/kfet/skipstone/actions/workflows/test.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/kfet/skipstone.svg)](https://pkg.go.dev/github.com/kfet/skipstone)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kfet/skipstone)](https://goreportcard.com/report/github.com/kfet/skipstone)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Minimal, zero-dependency Go client for **Amazon Bedrock `ConverseStream`**.
 
