@@ -134,12 +134,19 @@ func hashBody(req *http.Request) (string, error) {
 
 // canonicalURI returns the URI path encoded per SigV4 (encode each segment).
 func canonicalURI(u *url.URL) string {
-	if u.Path == "" {
+	// Canonicalise from the *escaped* path, not u.Path. SigV4 for non-S3
+	// services double-encodes the path: any percent-escape already present in
+	// the request URI (e.g. a `/` inside an ARN encoded as %2F) must be encoded
+	// again to %252F. Using u.Path would decode %2F back to a literal `/`, which
+	// would then be treated as a path separator and signed as a bare `/`,
+	// breaking the signature for ARNs (application-inference-profile etc.).
+	path := u.EscapedPath()
+	if path == "" {
 		return "/"
 	}
 	// AWS canonicalisation: each path segment is URL-encoded (RFC 3986
 	// unreserved set), but the segment separators stay as `/`.
-	parts := strings.Split(u.Path, "/")
+	parts := strings.Split(path, "/")
 	for i, p := range parts {
 		parts[i] = awsPathEscape(p)
 	}

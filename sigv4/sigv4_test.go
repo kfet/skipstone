@@ -201,7 +201,10 @@ func TestCanonicalURI(t *testing.T) {
 		{"", "/"},
 		{"/", "/"},
 		{"/foo", "/foo"},
-		{"/foo bar", "/foo%20bar"},
+		// Double-encoded: SigV4 (non-S3) canonicalises from the already-escaped
+		// path, so a literal space (wire %20) signs as %2520. Verified against
+		// the AWS SDK in the e2e module.
+		{"/foo bar", "/foo%2520bar"},
 		{"/a/b+c/d~e", "/a/b%2Bc/d~e"},
 	}
 	for _, c := range cases {

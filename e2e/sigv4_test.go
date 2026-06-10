@@ -7,6 +7,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -80,4 +81,47 @@ func normalizeAuthz(s string) string {
 		rest[i] = strings.TrimSpace(p)
 	}
 	return parts[0] + " " + strings.Join(rest, ", ")
+}
+
+// TestSigV4MatchesAWSSDK_InferenceProfileARN is a regression test for the
+// signature mismatch hit when ModelID is an application-inference-profile ARN
+// whose path contains a `/` (url.PathEscape -> %2F). The canonical URI must
+// double-encode that to %252F, matching the AWS SDK; signing from u.Path
+// instead of u.EscapedPath() produced a bare `/` and a 403.
+func TestSigV4MatchesAWSSDK_InferenceProfileARN(t *testing.T) {
+	body := []byte(`{"messages":[{"role":"user","content":[{"text":"hi"}]}]}`)
+	const arn = "arn:aws:bedrock:us-east-1:130726505375:application-inference-profile/kzezlud25yzf"
+	mkReq := func() *http.Request {
+		u := "https://bedrock-runtime.us-east-1.amazonaws.com/model/" +
+			url.PathEscape(arn) + "/converse-stream"
+		r, _ := http.NewRequest("POST", u, io.NopCloser(bytes.NewReader(body)))
+		r.Header.Set("Content-Type", "application/json")
+		return r
+	}
+	now := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
+	ak, sk, st := "AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", ""
+
+	light := mkReq()
+	if err := (&sigv4.Signer{Region: "us-east-1", Service: "bedrock"}).Sign(
+		light, sigv4.Credentials{AccessKeyID: ak, SecretAccessKey: sk}, now,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	sdkReq := mkReq()
+	sdkReq.Header.Set("Host", sdkReq.URL.Host)
+	payloadHash := hexSHA256(body)
+	sdkReq.Header.Set("X-Amz-Content-Sha256", payloadHash)
+	if err := awsv4.NewSigner().SignHTTP(
+		context.Background(), awsCreds(ak, sk, st), sdkReq,
+		payloadHash, "bedrock", "us-east-1", now,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	gotLight := normalizeAuthz(light.Header.Get("Authorization"))
+	gotSDK := normalizeAuthz(sdkReq.Header.Get("Authorization"))
+	if gotLight != gotSDK {
+		t.Errorf("Authorization mismatch:\n light: %s\n sdk:   %s", gotLight, gotSDK)
+	}
 }
