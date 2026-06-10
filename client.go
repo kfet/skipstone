@@ -20,15 +20,16 @@ import (
 
 // Client is a Bedrock ConverseStream client.
 type Client struct {
-	httpClient *http.Client
-	creds      creds.Provider
-	region     string
-	endpoint   string // optional override; if empty, derive from region
-	now        func() time.Time
-	maxRetries int
-	backoff    func(attempt int) time.Duration
-	classifier RetryClassifier
-	trace      func(ctx context.Context) *httptrace.ClientTrace
+	httpClient  *http.Client
+	creds       creds.Provider
+	region      string
+	endpoint    string // optional override; if empty, derive from region
+	bearerToken string // Bedrock API key (AWS_BEARER_TOKEN_BEDROCK); when set, bypasses SigV4
+	now         func() time.Time
+	maxRetries  int
+	backoff     func(attempt int) time.Duration
+	classifier  RetryClassifier
+	trace       func(ctx context.Context) *httptrace.ClientTrace
 }
 
 // Option configures a Client.
@@ -57,6 +58,12 @@ func WithStaticCredentials(ak, sk, st string) Option {
 func WithProfile(name string) Option {
 	return WithCredentials(creds.DefaultChain(creds.Config{Profile: name}))
 }
+
+// WithBearerToken installs a Bedrock API key (bearer token). When set, requests
+// are authenticated with an "Authorization: Bearer <token>" header and SigV4
+// signing is skipped entirely. This takes precedence over any credentials
+// provider. Mirrors the AWS SDK’s AWS_BEARER_TOKEN_BEDROCK behaviour.
+func WithBearerToken(tok string) Option { return func(cl *Client) { cl.bearerToken = tok } }
 
 // WithNow overrides the clock (used for SigV4 timestamps; mainly for tests).
 func WithNow(fn func() time.Time) Option { return func(cl *Client) { cl.now = fn } }
@@ -118,6 +125,9 @@ func NewClient(opts ...Option) (*Client, error) {
 			c.endpoint = "https://bedrock-runtime." + c.region + ".amazonaws.com"
 		}
 	}
+	if c.bearerToken == "" {
+		c.bearerToken = os.Getenv("AWS_BEARER_TOKEN_BEDROCK")
+	}
 	if c.creds == nil {
 		c.creds = creds.DefaultChain(creds.Config{})
 	}
@@ -177,17 +187,23 @@ func (c *Client) ConverseStream(ctx context.Context, in *ConverseStreamInput) (*
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/vnd.amazon.eventstream")
 
-		v, err := c.creds.Retrieve(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("skipstone: credentials: %w", err)
-		}
-		signer := &sigv4.Signer{Region: c.region, Service: "bedrock"}
-		if err := signer.Sign(req, sigv4.Credentials{
-			AccessKeyID:     v.AccessKeyID,
-			SecretAccessKey: v.SecretAccessKey,
-			SessionToken:    v.SessionToken,
-		}, c.now()); err != nil {
-			return nil, fmt.Errorf("skipstone: sign: %w", err)
+		if c.bearerToken != "" {
+			// Bedrock API key: bearer auth, no SigV4.
+			req.Header.Set("Host", req.URL.Host)
+			req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+		} else {
+			v, err := c.creds.Retrieve(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("skipstone: credentials: %w", err)
+			}
+			signer := &sigv4.Signer{Region: c.region, Service: "bedrock"}
+			if err := signer.Sign(req, sigv4.Credentials{
+				AccessKeyID:     v.AccessKeyID,
+				SecretAccessKey: v.SecretAccessKey,
+				SessionToken:    v.SessionToken,
+			}, c.now()); err != nil {
+				return nil, fmt.Errorf("skipstone: sign: %w", err)
+			}
 		}
 
 		resp, err = c.httpClient.Do(req)

@@ -688,3 +688,44 @@ func TestEventMetadataExtras(t *testing.T) {
 		t.Errorf("perf: %s", v.PerformanceConfig)
 	}
 }
+
+func TestConverseStream_BearerToken(t *testing.T) {
+	frame := eventstream.Encode(map[string]string{":event-type": "messageStop", ":message-type": "event"}, []byte(`{"stopReason":"end_turn"}`))
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer tok-123" {
+			t.Errorf("authorization = %q, want Bearer tok-123", got)
+		}
+		// Bearer auth must not produce SigV4 headers.
+		if r.Header.Get("X-Amz-Date") != "" || r.Header.Get("X-Amz-Content-Sha256") != "" {
+			t.Errorf("unexpected SigV4 headers on bearer request: date=%q sha=%q",
+				r.Header.Get("X-Amz-Date"), r.Header.Get("X-Amz-Content-Sha256"))
+		}
+		w.Header().Set("Content-Type", "application/vnd.amazon.eventstream")
+		w.Write(frame)
+	}))
+	t.Cleanup(srv.Close)
+
+	cl, err := NewClient(
+		WithEndpoint(srv.URL),
+		WithRegion("us-east-1"),
+		WithBearerToken("tok-123"),
+		// A creds provider is also installed; bearer must take precedence.
+		WithStaticCredentials("AK", "SK", ""),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stream, err := cl.ConverseStream(context.Background(), goodInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stream.Close()
+	for {
+		if _, err := stream.Recv(); err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
