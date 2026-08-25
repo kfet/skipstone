@@ -1,5 +1,9 @@
 .PHONY: all default test test-fast run-tests check fmt fmtcheck vet open_coverage e2e tidy
 
+# Coverage gate. Pinned as a `tool` directive in go.mod (`go get -tool`), so the
+# version is tracked there rather than inline here.
+COVGATE := go tool covgate
+
 # Default target: cover everything, fast.
 # Runs gofmt + vet across both modules, unit tests with 100% coverage gate
 # (cached, no race), and the e2e cross-check against aws-sdk-go-v2.
@@ -43,7 +47,7 @@ run-tests: check
 	if ! go test -cover $(TEST_FLAGS) ./... -coverprofile=coverage.tmp.out > $$tmpfile 2>&1; then \
 		cat $$tmpfile; exit 1; \
 	fi
-	@go run github.com/kfet/covgate/cmd/covgate@v0.1.0 \
+	@$(COVGATE) \
 		-profile=coverage.tmp.out -out=coverage.out -ignore=.covignore -min=100
 
 # Strict test pass: clean cache, race detector, shuffled. This is what CI runs.
