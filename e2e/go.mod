@@ -1,6 +1,6 @@
 module github.com/kfet/skipstone/e2e
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.7
@@ -12,7 +12,7 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.23 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.23 // indirect
-	github.com/aws/smithy-go v1.25.1
+	github.com/aws/smithy-go v1.25.1 // indirect
 )
 
 replace github.com/kfet/skipstone => ../

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking (toolchain):** minimum Go is now **1.24** (was 1.21). Needed
+  so the coverage gate can be pinned as a `tool` directive in `go.mod`
+  (`tool` directives landed in Go 1.24). The library itself remains
+  stdlib-only with zero runtime dependencies.
+- CI matrix updated to Go 1.24 (floor) + latest stable.
+
 ## [0.1.0] - 2026-05-06
 
 ### Added
@@ -31,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Retry with exponential backoff on 429/5xx, honoring `Retry-After`.
 - 100% test coverage gate; cross-checks against `aws-sdk-go-v2` for SigV4
   and event-stream framing in a separate `e2e/` module.
-- MIT license; GitHub Actions CI on Go 1.21 (floor) and latest stable.
+- MIT license; GitHub Actions CI on Go 1.24 (floor) and latest stable.
 
 [Unreleased]: https://github.com/kfet/skipstone/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/kfet/skipstone/releases/tag/v0.1.0
